@@ -1,4 +1,8 @@
 
+#include <cstdio>
+
+#include "platform.h"
+
 #include "opengl_helpers.h"
 
 using namespace GL;
@@ -7,9 +11,17 @@ GLuint GL::CompileShader(GLenum ShaderType, const char* ShaderStr)
 {
     GLuint Shader = glCreateShader(ShaderType);
 
-    // TODO: Check shader compilation
     glShaderSource(Shader, 1, &ShaderStr, nullptr);
     glCompileShader(Shader);
+
+    GLint CompileStatus;
+    glGetShaderiv(Shader, GL_COMPILE_STATUS, &CompileStatus);
+    if (CompileStatus == GL_FALSE)
+    {
+        char Infolog[1024];
+        glGetShaderInfoLog(Shader, ARRAY_SIZE(Infolog), nullptr, Infolog);
+        fprintf(stderr, "Shader error: %s\n", Infolog);
+    }
 
     return Shader;
 }

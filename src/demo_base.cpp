@@ -86,7 +86,7 @@ demo_base::demo_base()
         // Add a scaled down cube
 #if 0
         // This...
-        Cur = (vertex*)Mesh::Transform(Cur, BuildCube(Cur, VerticesEnd, Descriptor), Descriptor, Mat4::Scale({0.5f, 0.5f, 0.5f}));
+        Cur = (vertex*)Mesh::Transform(Cur, Mesh::BuildCube(Cur, VerticesEnd, Descriptor), Descriptor, Mat4::Scale({0.5f, 0.5f, 0.5f}));
 #else
         // is the same than this:
         vertex* QuadBegin = Cur;
@@ -96,7 +96,7 @@ demo_base::demo_base()
 #endif
 
         // Add a sphere on top of everything
-        Cur = (vertex*)Mesh::Transform(Cur, Mesh::BuildSphere(Cur, VerticesEnd, Descriptor, 8, 16), Descriptor, Mat4::Translate({ 0.f, 1.f, 0.f}) * Mat4::Scale({ 0.5f, 0.5f, 0.5f }));
+        Cur = (vertex*)Mesh::Transform(Cur, Mesh::BuildSphere(Cur, VerticesEnd, Descriptor, 8, 8), Descriptor, Mat4::Translate({ 0.f, 1.f, 0.f}) * Mat4::Scale({ 0.5f, 0.5f, 0.5f }));
 
         // Calculate vertex count (we need it to call glDrawArrays)
         this->VertexCount = (int)(Cur - VerticesStart);
@@ -124,6 +124,7 @@ demo_base::demo_base()
     glGenVertexArrays(1, &VAO);
 
     glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, MeshBuffer);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, Position));
@@ -166,7 +167,6 @@ void demo_base::Update(const platform_io& IO)
     
     // Display mesh
     glBindTexture(GL_TEXTURE_2D, Texture);
-    glBindBuffer(GL_ARRAY_BUFFER, MeshBuffer);
 
     glBindVertexArray(VAO);
 
