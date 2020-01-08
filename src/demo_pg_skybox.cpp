@@ -16,7 +16,6 @@ struct vertex
 };
 
 static const char* gVertexShaderStr = R"GLSL(
-#version 330 core
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 uv;
 uniform mat4 uProjection;
@@ -32,7 +31,6 @@ void main()
 })GLSL";
 
 static const char* gFragmentShaderStr = R"GLSL(
-#version 330 core
 uniform sampler2D colorTexture;
 in vec2 aUV;
 out vec3 color;

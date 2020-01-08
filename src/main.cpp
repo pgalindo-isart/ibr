@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
 
     // Demo scope
     {
-        int DemoId = 1; // Change this to start with another demo
+        int DemoId = 0; // Change this to start with another demo
         std::unique_ptr<demo> Demos[] = 
         {
             std::make_unique<demo_base>(),

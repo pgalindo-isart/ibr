@@ -42,6 +42,7 @@ namespace Math
 // VEC3 FUNCTIONS
 // ========================================================================
 inline v3 operator-(v3 A) { return { -A.x, -A.y, -A.z }; }
+inline v3 operator-(v3 A, v3 B) { return { A.x - B.x, A.y - B.y, A.z - B.z }; }
 
 inline v3 operator*(v3 V, float S) { return { V.x * S, V.y * S, V.z * S }; }
 inline v3 operator*(float S, v3 V) { return V * S; }
@@ -68,6 +69,15 @@ namespace Vec3
     {
         float InvLen = 1.f / Vec3::Length(V);
         return V * InvLen;
+    }
+
+    inline v3 Cross(v3 A, v3 B)
+    {
+        v3 R;
+        R.x = A.y * B.z - A.z * B.y;
+        R.y = A.z * B.x - A.x * B.z;
+        R.z = A.x * B.y - A.y * B.x;
+        return R;
     }
 }
 

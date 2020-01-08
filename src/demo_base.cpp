@@ -12,35 +12,51 @@ struct vertex
 {
     v3 Position;
     v2 UV;
+    v3 Normal;
 };
 
 static const char* gVertexShaderStr = R"GLSL(
-#version 330 core
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 uv;
+layout(location = 2) in vec3 normal;
 uniform float uTime;
 uniform mat4 uProjection;
 uniform mat4 uView;
 uniform mat4 uModel;
 
 out vec2 aUV;
+out vec3 aViewPos;
+out vec3 aViewNormal;
+out mat4 aViewMatrix;
 
 void main()
 {
     aUV = uv;
+    mat4 modelView = uView * uModel;
+    aViewPos = (modelView * vec4(position, 1.0)).xyz;
+    aViewNormal = (modelView * vec4(normal, 0.0)).xyz;
+    aViewMatrix = uView;
     gl_Position = uProjection * uView * uModel * vec4(position, 1.0);
 })GLSL";
 
 static const char* gFragmentShaderStr = R"GLSL(
-#version 330 core
 uniform sampler2D colorTexture;
 in vec2 aUV;
+in vec3 aViewPos;
+in vec3 aViewNormal;
+in mat4 aViewMatrix;
 out vec3 color;
 uniform float uTime;
+
 void main()
 {
     color = texture(colorTexture, aUV).rgb;
-    color.r = (1.0 + sin(uTime * 4)) / 2.0;
+    
+    // Apply a phong light shading (converting its position to modelView)
+    // In real case, we do not use gDefaultLight and precompute the light ViewPosition
+    Light light = gDefaultLight;
+    light.position = aViewMatrix * gDefaultLight.position;
+    color = shade(light, aViewPos, normalize(aViewNormal));
 })GLSL";
 
 static void GenerateCheckerboard(v4* Texels, int Width, int Height, int SquareSize)
@@ -66,7 +82,7 @@ demo_base::demo_base()
     
     // Gen mesh
     {
-        std::vector<vertex> VerticeBuffer(2048);
+        std::vector<vertex> VerticeBuffer(20480);
 
         vertex* VerticesStart = &VerticeBuffer[0];
         vertex* VerticesEnd = VerticesStart + VerticeBuffer.size();
@@ -75,13 +91,12 @@ demo_base::demo_base()
         vertex_descriptor Descriptor = {};
         Descriptor.Stride = sizeof(vertex);
         Descriptor.HasUV = true;
+        Descriptor.HasNormal = true;
         Descriptor.PositionOffset = OFFSETOF(vertex, Position);
         Descriptor.UVOffset = OFFSETOF(vertex, UV);
+        Descriptor.NormalOffset = OFFSETOF(vertex, Normal);
 
         vertex* Cur = VerticesStart;
-        
-        // Add a quad
-        Cur = (vertex*)Mesh::BuildQuad(Cur, VerticesEnd, Descriptor);
 
         // Add a scaled down cube
 #if 0
@@ -95,8 +110,15 @@ demo_base::demo_base()
         Cur = QuadEnd;
 #endif
 
-        // Add a sphere on top of everything
-        Cur = (vertex*)Mesh::Transform(Cur, Mesh::BuildSphere(Cur, VerticesEnd, Descriptor, 8, 8), Descriptor, Mat4::Translate({ 0.f, 1.f, 0.f}) * Mat4::Scale({ 0.5f, 0.5f, 0.5f }));
+        // Add a obj
+        Cur = (vertex*)Mesh::Transform(
+            Cur, Mesh::LoadObj(Cur, VerticesEnd, Descriptor, "media/teapot.obj", 0.1f),
+            Descriptor, Mat4::Translate({ 0.f, 0.25f, 0.f }));
+
+        // Add a sphere
+        Cur = (vertex*)Mesh::Transform(
+            Cur, Mesh::BuildSphere(Cur, VerticesEnd, Descriptor, 8, 8),
+            Descriptor, Mat4::Translate({ 1.f, 0.f, 0.f}) * Mat4::Scale({ 0.5f, 0.5f, 0.5f }));
 
         // Calculate vertex count (we need it to call glDrawArrays)
         this->VertexCount = (int)(Cur - VerticesStart);
@@ -127,8 +149,10 @@ demo_base::demo_base()
     glBindBuffer(GL_ARRAY_BUFFER, MeshBuffer);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, Position));
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, UV));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, Normal));
     glBindVertexArray(0);
 }
 

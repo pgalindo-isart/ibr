@@ -1,6 +1,11 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cassert>
+#include <vector>
+#include <string>
+
+#include "tiny_obj_loader.h"
 
 #include "maths.h"
 
@@ -15,7 +20,7 @@ struct base_vertex
     v2 UV;
 };
 
-void* ConvertVertices(void* VerticesDst, const vertex_descriptor& Descriptor, base_vertex* VerticesSrc, int Count)
+static void* ConvertVertices(void* VerticesDst, const vertex_descriptor& Descriptor, base_vertex* VerticesSrc, int Count)
 {
     uint8_t* Buffer = (uint8_t*)VerticesDst;
 
@@ -43,7 +48,7 @@ void* ConvertVertices(void* VerticesDst, const vertex_descriptor& Descriptor, ba
     return Buffer + Descriptor.Stride * Count;
 }
 
-int GetVertexCount(void* Vertices, void* End, const vertex_descriptor& Descriptor)
+static int GetVertexCount(void* Vertices, void* End, const vertex_descriptor& Descriptor)
 {
     int SizeInBytes = (int)((uint8_t*)End - (uint8_t*)Vertices);
     return SizeInBytes / Descriptor.Stride;
@@ -197,4 +202,102 @@ void* Mesh::BuildSphere(void* Vertices, void* End, const vertex_descriptor& Desc
 
     // Transform pos from [-1;+1] to [-0.5;+0.5] to make a unit sphere
     return Mesh::Transform(Vertices, Cur, Descriptor, Mat4::Scale({ 0.5f, 0.5f, 0.5f }));
+}
+
+void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descriptor, const char* Filename, float Scale)
+{
+    bool HasNormals = false;
+    bool HasTexCoords = false;
+
+    std::vector<base_vertex> Mesh;
+
+    {
+        std::string Warn;
+        std::string Err;
+        tinyobj::attrib_t Attrib;
+        std::vector<tinyobj::shape_t> Shapes;
+
+        tinyobj::LoadObj(&Attrib, &Shapes, nullptr, &Warn, &Err, Filename, "media/", true);
+        if (!Err.empty())
+        {
+            fprintf(stderr, "Warning loading obj: %s\n", Err.c_str());
+        }
+        if (!Err.empty())
+        {
+            fprintf(stderr, "Error loading obj: %s\n", Err.c_str());
+            return Vertices;
+        }
+
+        HasNormals = !Attrib.normals.empty();
+        HasTexCoords = !Attrib.texcoords.empty();
+
+        // Build all meshes
+        for (int MeshId = 0; MeshId < (int)Shapes.size(); ++MeshId)
+        {
+            const tinyobj::mesh_t& MeshDef = Shapes[MeshId].mesh;
+            
+            int IndexId = 0;
+            for (int FaceId = 0; FaceId < (int)MeshDef.num_face_vertices.size(); ++FaceId)
+            {
+                int FaceVertices = MeshDef.num_face_vertices[FaceId];
+                assert(FaceVertices == 3);
+        
+                for (int j = 0; j < FaceVertices; ++j)
+                {
+                    const tinyobj::index_t& Index = MeshDef.indices[IndexId];
+                    base_vertex V;
+                    V.Position = {
+                        Scale * Attrib.vertices[Index.vertex_index * 3 + 0],
+                        Scale * Attrib.vertices[Index.vertex_index * 3 + 1],
+                        Scale * Attrib.vertices[Index.vertex_index * 3 + 2]
+                    };
+
+                    if (HasNormals)
+                    {
+                        V.Normal = {
+                            Attrib.normals[Index.normal_index * 3 + 0],
+                            Attrib.normals[Index.normal_index * 3 + 1],
+                            Attrib.normals[Index.normal_index * 3 + 2]
+                        };
+                    }
+
+                    if (HasTexCoords)
+                    {
+                        V.UV = {
+                            Attrib.texcoords[Index.texcoord_index * 2 + 0],
+                            Attrib.texcoords[Index.texcoord_index * 2 + 1]
+                        };
+                    }
+                    
+                    Mesh.push_back(V);
+
+                    IndexId++;
+                }
+            }
+        }
+    }
+
+    // Rebuild normals
+    if (!HasNormals)
+    {
+        for (int i = 0; i < (int)Mesh.size(); i += 3)
+        {
+            base_vertex& V0 = Mesh[i+0];
+            base_vertex& V1 = Mesh[i+1];
+            base_vertex& V2 = Mesh[i+2];
+
+            v3 Normal = Vec3::Cross((V1.Position - V0.Position), (V2.Position - V0.Position));
+            V0.Normal = V1.Normal = V2.Normal = Normal;
+        }
+    }
+
+    int MeshSize = Mesh.size();
+    int SizeAvailable = GetVertexCount(Vertices, End, Descriptor);
+    if (MeshSize > SizeAvailable)
+    {
+        fprintf(stderr, "Mesh '%s' does not fit inside vertex buffer (%d needed, %d available)\n", Filename, MeshSize, SizeAvailable);
+        MeshSize = SizeAvailable;
+    }
+
+    return ConvertVertices(Vertices, Descriptor, &Mesh[0], MeshSize);
 }

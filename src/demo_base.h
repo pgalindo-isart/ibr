@@ -23,5 +23,5 @@ private:
     GLuint MeshBuffer = 0;
     GLuint VAO = 0;
 
-    GLuint Texture;
+    GLuint Texture = 0;
 };

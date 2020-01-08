@@ -35,6 +35,6 @@ private:
     int SkyboxCount = 0;
 
     // Textures
-    GLuint MeshTexture;
-    GLuint SkyboxTextures[6];
+    GLuint MeshTexture = 0;
+    GLuint SkyboxTextures[6] = {};
 };
