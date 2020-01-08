@@ -43,7 +43,7 @@ void main()
     color.r = (1.0 + sin(uTime * 4)) / 2.0;
 })GLSL";
 
-void GenerateCheckerboard(v4* Texels, int Width, int Height, int SquareSize)
+static void GenerateCheckerboard(v4* Texels, int Width, int Height, int SquareSize)
 {
     for (int y = 0; y < Height; ++y)
     {
