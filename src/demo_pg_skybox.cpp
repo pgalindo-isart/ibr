@@ -91,7 +91,7 @@ demo_pg_skybox::demo_pg_skybox()
                 Cur, Mesh::BuildSphere(Cur, VerticesEnd, Descriptor, 8, 8),
                 Descriptor, Mat4::Translate({ 0.f, 1.f, 0.f}) * Mat4::Scale({ 0.5f, 0.5f, 0.5f }));
 
-            this->MeshVertexCount = (int)(Cur - VerticesStart);
+            this->MeshVertexCount = (int)(Cur - VerticesStart) - this->MeshVertexStart;
         }
 
         // Create the skybox mesh
@@ -123,7 +123,7 @@ demo_pg_skybox::demo_pg_skybox()
                 Cur, Mesh::BuildQuad(Cur, VerticesEnd, Descriptor),
                 Descriptor, Mat4::RotateY(-Math::HalfPi()) * Mat4::RotateX(-Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
             
-            this->SkyboxCount = (int)(Cur - VerticesStart);
+            this->SkyboxCount = (int)(Cur - VerticesStart) - this->SkyboxStart;
         }
 
         // Upload mesh to gpu
