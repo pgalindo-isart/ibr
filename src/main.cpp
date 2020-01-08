@@ -18,6 +18,7 @@
 
 #include "demo_base.h"
 // TODO(demo): Add headers here
+#include "demo_pg_skybox.h"
 
 #if 0
 // Run on laptop high perf GPU
@@ -209,14 +210,12 @@ int main(int argc, char* argv[])
 
     // Demo scope
     {
-        int DemoId = 0; // Change this to start with another demo
+        int DemoId = 1; // Change this to start with another demo
         std::unique_ptr<demo> Demos[] = 
         {
             std::make_unique<demo_base>(),
             // TODO(demo): Add other demos here
-            std::make_unique<demo_base>(),
-            std::make_unique<demo_base>(),
-            std::make_unique<demo_base>(),
+            std::make_unique<demo_pg_skybox>(),
         };
 
         // Main loop

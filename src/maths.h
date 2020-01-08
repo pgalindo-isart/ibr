@@ -181,6 +181,24 @@ namespace Mat4
         float S = Math::Sin(AngleRadians);
         return Mat4::RotateY(C, S);
     }
+
+    inline mat4 RotateZ(float C, float S)
+    {
+        return
+        {
+              C,   S, 0.f, 0.f,
+             -S,   C, 0.f, 0.f,
+            0.f, 0.f, 1.f, 0.f,
+            0.f, 0.f, 0.f, 1.f,
+        };
+    }
+
+    inline mat4 RotateZ(float AngleRadians)
+    {
+        float C = Math::Cos(AngleRadians);
+        float S = Math::Sin(AngleRadians);
+        return Mat4::RotateZ(C, S);
+    }
     
     inline mat4 Transpose(mat4 M)
     {

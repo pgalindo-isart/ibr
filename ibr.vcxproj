@@ -147,6 +147,7 @@
   <ItemGroup>
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\demo_base.cpp" />
+    <ClCompile Include="src\demo_pg_skybox.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\imgui.cpp" />
     <ClCompile Include="src\imgui_demo.cpp" />
@@ -164,6 +165,7 @@
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\demo.h" />
     <ClInclude Include="src\demo_base.h" />
+    <ClInclude Include="src\demo_pg_skybox.h" />
     <ClInclude Include="src\imconfig.h" />
     <ClInclude Include="src\imgui.h" />
     <ClInclude Include="src\imgui_impl_glfw.h" />
