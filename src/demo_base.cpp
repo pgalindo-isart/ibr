@@ -49,10 +49,10 @@ void GenerateCheckerboard(v4* Texels, int Width, int Height, int SquareSize)
     {
         for (int x = 0; x < Width; ++x)
         {
-            int pixelIndex = x + y * Width;
-            int tileX = x / SquareSize;
-            int tileY = y / SquareSize;
-            Texels[pixelIndex] = ((tileX + tileY) % 2) ? v4{ 0.1f, 0.1f, 0.1f, 1.f } : v4{ 0.7f, 0.7f, 0.7f, 1.f };
+            int PixelIndex = x + y * Width;
+            int TileX = x / SquareSize;
+            int TileY = y / SquareSize;
+            Texels[PixelIndex] = ((TileX + TileY) % 2) ? v4{ 0.1f, 0.1f, 0.1f, 1.f } : v4{ 0.7f, 0.7f, 0.7f, 1.f };
         }
     }
 }
