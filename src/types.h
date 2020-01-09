@@ -4,12 +4,20 @@
 
 struct v2
 {
-    float x, y;
+    union
+    {
+        struct { float x, y; };
+        float e[2];
+    };
 };
 
 struct v3
 {
-    float x, y, z;
+    union
+    {
+        struct { float x, y, z; };
+        float e[3];
+    };
 };
 
 struct v4

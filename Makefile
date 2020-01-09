@@ -9,7 +9,7 @@ LDFLAGS=
 # Common list
 SRCS=src/main.cpp src/opengl_helpers.cpp src/camera.cpp src/mesh.cpp
 # Demo files list
-SRCS+=src/demo_base.cpp src/demo_pg_skybox.cpp
+SRCS+=src/demo_base.cpp src/demo_minimal.cpp src/demo_pg_skybox.cpp src/demo_postprocess.cpp
 # ImGui files list
 SRCS+=src/imgui_demo.cpp src/imgui_draw.cpp src/imgui_widgets.cpp src/imgui.cpp src/imgui_impl_glfw.cpp src/imgui_impl_opengl3.cpp
 SRCS+=src/tiny_obj_loader.cpp

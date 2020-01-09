@@ -309,7 +309,7 @@ void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descript
         }
     }
 
-    // Rebuild normals
+    // Build normals if missing
     if (!HasNormals)
     {
         for (int i = 0; i < (int)Mesh.size(); i += 3)
@@ -320,6 +320,24 @@ void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descript
 
             v3 Normal = Vec3::Cross((V1.Position - V0.Position), (V2.Position - V0.Position));
             V0.Normal = V1.Normal = V2.Normal = Normal;
+        }
+    }
+    
+    // Build UVs if missing
+    if (!HasTexCoords)
+    {
+        // TODO: Maybe triplanar texturing can make best results
+        for (int i = 0; i < (int)Mesh.size(); ++i)
+        {
+            base_vertex& V = Mesh[i];
+
+            float Length = Vec3::Length(V.Position);
+            if (Length != 0.f)
+            {
+                v3 Pos = V.Position / Length;
+                V.UV.x = 0.5f + Math::Atan2(Pos.z, Pos.x);
+                V.UV.y = Pos.y;
+            }
         }
     }
 

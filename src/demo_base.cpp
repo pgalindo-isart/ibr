@@ -16,7 +16,7 @@ struct vertex
 };
 
 static const char* gVertexShaderStr = R"GLSL(
-#line 19
+#line 20
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 normal;
@@ -41,38 +41,25 @@ void main()
 })GLSL";
 
 static const char* gFragmentShaderStr = R"GLSL(
+#line 45
 uniform sampler2D colorTexture;
 in vec2 aUV;
 in vec3 aViewPos;
 in vec3 aViewNormal;
 in mat4 aViewMatrix;
-out vec3 color;
+out vec4 color;
 uniform float uTime;
 
 void main()
 {
-    color = texture(colorTexture, aUV).rgb;
+    color = texture(colorTexture, aUV);
     
     // Apply a phong light shading (converting its position to modelView)
     // In real case, we do not use gDefaultLight and precompute the light ViewPosition
     light light = gDefaultLight;
     light.position = aViewMatrix * gDefaultLight.position;
-    color = light_shade(light, aViewPos, normalize(aViewNormal));
+    color.rgb *= light_shade(light, aViewPos, normalize(aViewNormal));
 })GLSL";
-
-static void GenerateCheckerboard(v4* Texels, int Width, int Height, int SquareSize)
-{
-    for (int y = 0; y < Height; ++y)
-    {
-        for (int x = 0; x < Width; ++x)
-        {
-            int PixelIndex = x + y * Width;
-            int TileX = x / SquareSize;
-            int TileY = y / SquareSize;
-            Texels[PixelIndex] = ((TileX + TileY) % 2) ? v4{ 0.1f, 0.1f, 0.1f, 1.f } : v4{ 0.7f, 0.7f, 0.7f, 1.f };
-        }
-    }
-}
 
 demo_base::demo_base()
 {
@@ -132,13 +119,9 @@ demo_base::demo_base()
 
     // Gen texture
     {
-        int Width = 64;
-        std::vector<v4> Texels(Width * Width);
-        GenerateCheckerboard(&Texels[0], Width, Width, 8);
-
         glGenTextures(1, &Texture);
         glBindTexture(GL_TEXTURE_2D, Texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Width, Width, 0, GL_RGBA, GL_FLOAT, &Texels[0]);
+        GL::UploadCheckerboardTexture(64, 64, 8);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }

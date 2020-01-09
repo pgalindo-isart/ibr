@@ -24,4 +24,8 @@ struct platform_io
     float MouseY;
 
     camera_inputs CameraInputs;
+
+    // F1 to F12 keys
+    bool DebugKeysDown[12];
+    bool DebugKeysPressed[12];
 };

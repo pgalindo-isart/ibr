@@ -1,5 +1,6 @@
 
 #include <cstdio>
+#include <vector>
 
 #include "imgui.h"
 #include "stb_image.h"
@@ -150,6 +151,24 @@ void GL::UploadTexture(const char* Filename, int ImageFlags, int* WidthOut, int*
         *HeightOut = Height;
 
     stbi_set_flip_vertically_on_load(0); // Always reset to default value
+}
+
+void GL::UploadCheckerboardTexture(int Width, int Height, int SquareSize)
+{
+	std::vector<v4> Texels(Width * Height);
+
+	for (int y = 0; y < Height; ++y)
+	{
+		for (int x = 0; x < Width; ++x)
+		{
+			int PixelIndex = x + y * Width;
+			int TileX = x / SquareSize;
+			int TileY = y / SquareSize;
+			Texels[PixelIndex] = ((TileX + TileY) % 2) ? v4{ 0.1f, 0.1f, 0.1f, 1.f } : v4{ 0.7f, 0.7f, 0.7f, 1.f };
+		}
+	}
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Width, Width, 0, GL_RGBA, GL_FLOAT, &Texels[0]);
 }
 
 static void DebugGLBoolText(const char* Name, GLint value, bool color = true)

@@ -1,6 +1,7 @@
 
 #include <memory>
 #include <cstdio>
+#include <typeinfo>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -16,11 +17,13 @@
 #include "camera.h"
 #include "platform.h"
 
+#include "demo_minimal.h"
 #include "demo_base.h"
-// TODO(demo): Add headers here
 #include "demo_pg_skybox.h"
+#include "demo_postprocess.h"
+// TODO(demo): Add headers here
 
-#if 0
+#if 1
 // Run on laptop high perf GPU
 extern "C"
 {
@@ -44,16 +47,8 @@ struct app
     keyboard Keyboard = {};
 };
 
-
-
-
-
 // Update platform IO from glfw
-
-
-void GLFWPlatformIOUpdate(GLFWwindow* Window
-
-, platform_io* IO)
+void GLFWPlatformIOUpdate(GLFWwindow* Window, platform_io* IO)
 {
     // Time calculation
     {
@@ -160,8 +155,8 @@ bool KeyPressed(int Key, const keyboard& PrevKeyboard, const keyboard& Keyboard)
 
 int main(int argc, char* argv[])
 {
-    const int WIDTH = 1280;
-    const int HEIGHT = 720;
+    const int WIDTH = 1440;
+    const int HEIGHT = 900;
     
     app App = {};
 
@@ -218,12 +213,17 @@ int main(int argc, char* argv[])
 
     // Demo scope
     {
+        // First update to pass to demo constructors
+        GLFWPlatformIOUpdate(App.Window, &App.IO);
+
         int DemoId = 0; // Change this to start with another demo
         std::unique_ptr<demo> Demos[] = 
         {
             std::make_unique<demo_base>(),
-            // TODO(demo): Add other demos here
+            std::make_unique<demo_minimal>(),
             std::make_unique<demo_pg_skybox>(),
+            std::make_unique<demo_postprocess>(App.IO),
+            // TODO(demo): Add other demos here
         };
 
         // Main loop
@@ -252,6 +252,14 @@ int main(int argc, char* argv[])
                     glfwSetWindowShouldClose(App.Window, GLFW_TRUE);
                 }
             }
+
+            // Debug keys
+            for (int i = 0; i < 12; ++i)
+            {
+                int Key = GLFW_KEY_F1 + i;
+                App.IO.DebugKeysDown[i]    = App.Keyboard.Keys[Key];
+                App.IO.DebugKeysPressed[i] = KeyPressed(Key, PrevKeyboard, App.Keyboard);
+            }
             
             // Start the Dear ImGui frame
             ImGui_ImplOpenGL3_NewFrame();
@@ -270,6 +278,8 @@ int main(int argc, char* argv[])
                 ImGui::SameLine();
                 if (ImGui::Button("Next"))
                     DemoId = Math::TrueMod(DemoId + 1, (int)ARRAY_SIZE(Demos));
+                ImGui::SameLine();
+                ImGui::Text("[%s]", typeid(*Demos[DemoId]).name());
             }
 
             // Display GPU infos

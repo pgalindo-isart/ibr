@@ -24,7 +24,8 @@ namespace GL
 
     GLuint CompileShader(GLenum ShaderType, const char* ShaderStr, bool InjectLightShading = false);
     GLuint CreateProgram(const char* VSString, const char* FSString, bool InjectLightShading = false);
-    void UploadTexture(const char* Filename, int ImageFlags, int* WidthOut = nullptr, int* HeightOut = nullptr);
+    void UploadTexture(const char* Filename, int ImageFlags = 0, int* WidthOut = nullptr, int* HeightOut = nullptr);
+    void UploadCheckerboardTexture(int Width, int Height, int SquareSize);
 }
 
 namespace GLImGui

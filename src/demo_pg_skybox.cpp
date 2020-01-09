@@ -16,6 +16,7 @@ struct vertex
 };
 
 static const char* gVertexShaderStr = R"GLSL(
+#line 20
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 uv;
 uniform mat4 uProjection;
@@ -31,27 +32,14 @@ void main()
 })GLSL";
 
 static const char* gFragmentShaderStr = R"GLSL(
+#line 36
 uniform sampler2D colorTexture;
 in vec2 aUV;
-out vec3 color;
+out vec4 color;
 void main()
 {
-    color = texture(colorTexture, aUV).rgb;
+    color = texture(colorTexture, aUV);
 })GLSL";
-
-static void GenerateCheckerboard(v4* Texels, int Width, int Height, int SquareSize)
-{
-    for (int y = 0; y < Height; ++y)
-    {
-        for (int x = 0; x < Width; ++x)
-        {
-            int PixelIndex = x + y * Width;
-            int TileX = x / SquareSize;
-            int TileY = y / SquareSize;
-            Texels[PixelIndex] = ((TileX + TileY) % 2) ? v4{ 0.1f, 0.1f, 0.1f, 1.f } : v4{ 0.7f, 0.7f, 0.7f, 1.f };
-        }
-    }
-}
 
 demo_pg_skybox::demo_pg_skybox()
 {
@@ -109,13 +97,11 @@ demo_pg_skybox::demo_pg_skybox()
 
     // Gen mesh texture
     {
-        int Width = 64;
-        std::vector<v4> Texels(Width * Width);
-        GenerateCheckerboard(&Texels[0], Width, Width, 8);
-
         glGenTextures(1, &MeshTexture);
         glBindTexture(GL_TEXTURE_2D, MeshTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Width, Width, 0, GL_RGBA, GL_FLOAT, &Texels[0]);
+        GL::UploadCheckerboardTexture(64, 64, 8);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
