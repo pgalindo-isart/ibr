@@ -14,7 +14,7 @@ public:
     {
         GLuint FBO;
         GLuint ColorTexture;
-        GLuint DepthStencilTexture;
+        GLuint DepthStencilRenderbuffer;
     };
 
     // Render some geometry

@@ -277,7 +277,7 @@ void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descript
                 for (int j = 0; j < FaceVertices; ++j)
                 {
                     const tinyobj::index_t& Index = MeshDef.indices[IndexId];
-                    base_vertex V;
+                    base_vertex V = {};
                     V.Position = {
                         Scale * Attrib.vertices[Index.vertex_index * 3 + 0],
                         Scale * Attrib.vertices[Index.vertex_index * 3 + 1],

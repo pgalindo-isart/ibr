@@ -27,33 +27,38 @@ static demo_postprocess::framebuffer CreateFramebuffer(int ScreenWidth, int Scre
 	GLuint ColorTexture;
 	glGenTextures(1, &ColorTexture);
 	glBindTexture(GL_TEXTURE_2D, ColorTexture);
+    glObjectLabel(GL_TEXTURE, ColorTexture, -1, "ColorTexture");
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ScreenWidth, ScreenHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    GLuint DepthStencil;
-    glGenTextures(1, &DepthStencil);
-    glBindTexture(GL_TEXTURE_2D, DepthStencil);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, ScreenWidth, ScreenHeight, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	// Setup attachement
+    // Note: Here we store the depth stencil in a renderbuffer object, 
+    // but we can as well store it in a texture if we want to display it later
+    GLuint DepthStencilRenderbuffer;
+    glGenRenderbuffers(1, &DepthStencilRenderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, DepthStencilRenderbuffer);
+    glObjectLabel(GL_RENDERBUFFER, DepthStencilRenderbuffer, -1, "DepthStencilRenderbuffer");
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, ScreenWidth, ScreenHeight);
+	
+    // Setup attachements
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, ColorTexture, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, DepthStencil, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, DepthStencilRenderbuffer);
 
-	unsigned int DrawAttachments[2] = { GL_COLOR_ATTACHMENT0 + 0, GL_COLOR_ATTACHMENT0 + 1 };
-	glDrawBuffers(2, DrawAttachments);
+	unsigned int DrawAttachments[1] = { GL_COLOR_ATTACHMENT0 + 0 };
+	glDrawBuffers(1, DrawAttachments);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		fprintf(stderr, "demo_postprocess::framebuffer failed to complete\n");
+    GLenum FramebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (FramebufferStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+        fprintf(stderr, "demo_postprocess::framebuffer failed to complete (0x%x)\n", FramebufferStatus);
+    }
     
 	glBindFramebuffer(GL_FRAMEBUFFER, PreviousFramebuffer);
 
 	demo_postprocess::framebuffer Framebuffer = {};
     Framebuffer.FBO = FBO;
     Framebuffer.ColorTexture = ColorTexture;
-    Framebuffer.DepthStencilTexture = DepthStencil;
+    Framebuffer.DepthStencilRenderbuffer = DepthStencilRenderbuffer;
 
     return Framebuffer;    
 }
