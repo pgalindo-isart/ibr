@@ -79,7 +79,7 @@ demo_base::demo_base()
     this->Camera.Position.z = 2.f;
 
     // Create render pipeline
-    this->Program = GL::CreateProgram(gVertexShaderStr, gFragmentShaderStr);
+    this->Program = GL::CreateProgram(gVertexShaderStr, gFragmentShaderStr, true);
     
     // Gen mesh
     {

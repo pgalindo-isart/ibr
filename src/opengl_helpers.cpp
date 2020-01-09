@@ -9,8 +9,10 @@
 
 using namespace GL;
 
-static const char* ShaderCommonStr = R"GLSL(
-// SHADER COMMON START ===============
+// Light shader function
+static const char* PhongLightingStr = R"GLSL(
+// =================================
+// PHONG SHADER START ===============
 struct light
 {
     bool enabled;
@@ -31,13 +33,6 @@ light gDefaultLight = light(
     vec3(0.9, 0.9, 0.9),
     64.0,
     float[3](1.0, 0.0, 0.0));
-
-// Light shader function
-vec3 light_shade(light light, vec3 position, vec3 normal);
-// SHADER COMMON END ===============
-)GLSL";
-
-static const char* PhongLightingStr = R"GLSL(
 vec3 light_shade(light light, vec3 position, vec3 normal)
 {
     vec3 lightDir;
@@ -70,15 +65,17 @@ vec3 light_shade(light light, vec3 position, vec3 normal)
     //return clamp(ambient + diffuse + specular, { 0.f, 0.f, 0.f }, { 1.f, 1.f, 1.f});
     return attenuation * (ambient + diffuse + specular);
 }
+// PHONG SHADER STOP ===============
+// =================================
 )GLSL";
 
-GLuint GL::CompileShader(GLenum ShaderType, const char* ShaderStr)
+GLuint GL::CompileShader(GLenum ShaderType, const char* ShaderStr, bool InjectLightShading)
 {
     GLuint Shader = glCreateShader(ShaderType);
 
     const char* Sources[] = {
         "#version 330 core",
-        ShaderCommonStr,
+		InjectLightShading ? PhongLightingStr : "",
         ShaderStr,
     };
 
@@ -97,15 +94,13 @@ GLuint GL::CompileShader(GLenum ShaderType, const char* ShaderStr)
     return Shader;
 }
 
-GLuint GL::CreateProgram(const char* VSString, const char* FSString)
+GLuint GL::CreateProgram(const char* VSString, const char* FSString, bool InjectLightShading)
 {
     GLuint Program = glCreateProgram();
 
-    GLuint FragmentShaderCommon = GL::CompileShader(GL_FRAGMENT_SHADER, PhongLightingStr);
     GLuint VertexShader         = GL::CompileShader(GL_VERTEX_SHADER, VSString);
-    GLuint FragmentShader       = GL::CompileShader(GL_FRAGMENT_SHADER, FSString);
+    GLuint FragmentShader       = GL::CompileShader(GL_FRAGMENT_SHADER, FSString, InjectLightShading);
 
-    glAttachShader(Program, FragmentShaderCommon);
     glAttachShader(Program, VertexShader);
     glAttachShader(Program, FragmentShader);
 
@@ -113,7 +108,6 @@ GLuint GL::CreateProgram(const char* VSString, const char* FSString)
 
     glDeleteShader(VertexShader);
     glDeleteShader(FragmentShader);
-    glDeleteShader(FragmentShaderCommon);
 
     return Program;
 }
