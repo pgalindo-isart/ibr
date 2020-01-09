@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 struct v2
 {
     float x, y;

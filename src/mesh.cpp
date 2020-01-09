@@ -137,6 +137,38 @@ void* Mesh::BuildCube(void* Vertices, void* End, const vertex_descriptor& Descri
     return V;
 }
 
+void* Mesh::BuildInvertedCube(void* Vertices, void* End, const vertex_descriptor& Descriptor)
+{
+    void* V = Vertices;
+
+    // FRONT FACE
+    V = Mesh::Transform(
+        V, Mesh::BuildQuad(V, End, Descriptor),
+        Descriptor, Mat4::Translate({ 0.f, 0.f, -0.5f }));
+    // BACK FACE
+    V = Mesh::Transform(
+        V, Mesh::BuildQuad(V, End, Descriptor),
+        Descriptor, Mat4::RotateY(Math::Pi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
+    // RIGHT FACE
+    V = Mesh::Transform(
+        V, Mesh::BuildQuad(V, End, Descriptor),
+        Descriptor, Mat4::RotateY(Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
+    // LEFT FACE
+    V = Mesh::Transform(
+        V, Mesh::BuildQuad(V, End, Descriptor),
+        Descriptor, Mat4::RotateY(-Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
+    // TOP FACE
+    V = Mesh::Transform(
+        V, Mesh::BuildQuad(V, End, Descriptor),
+        Descriptor, Mat4::RotateY(-Math::HalfPi()) * Mat4::RotateX(Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
+    // BOTTOM FACE
+    V = Mesh::Transform(
+        V, Mesh::BuildQuad(V, End, Descriptor),
+        Descriptor, Mat4::RotateY(-Math::HalfPi()) * Mat4::RotateX(-Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
+
+    return V;
+}
+
 void* Mesh::BuildSphere(void* Vertices, void* End, const vertex_descriptor& Descriptor, int Lon, int Lat)
 {
     if (GetVertexCount(Vertices, End, Descriptor) < (Lon * Lat * 6))
@@ -291,7 +323,7 @@ void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descript
         }
     }
 
-    int MeshSize = Mesh.size();
+    int MeshSize = (int)Mesh.size();
     int SizeAvailable = GetVertexCount(Vertices, End, Descriptor);
     if (MeshSize > SizeAvailable)
     {

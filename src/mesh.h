@@ -18,6 +18,7 @@ namespace Mesh
 void* Transform(void* Vertices, void* End, const vertex_descriptor& Descriptor, const mat4& Transform);
 void* BuildQuad(void* Vertices, void* End, const vertex_descriptor& Descriptor);
 void* BuildCube(void* Vertices, void* End, const vertex_descriptor& Descriptor);
+void* BuildInvertedCube(void* Vertices, void* End, const vertex_descriptor& Descriptor);
 void* BuildSphere(void* Vertices, void* End, const vertex_descriptor& Descriptor, int Lon, int Lat);
 void* LoadObj(void* Vertices, void* End, const vertex_descriptor& Descriptor, const char* Filename, float Scale);
 }

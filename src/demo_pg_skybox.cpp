@@ -96,31 +96,8 @@ demo_pg_skybox::demo_pg_skybox()
         {
             this->SkyboxStart = (int)(Cur - VerticesStart);
 
-            // FRONT FACE
-            Cur = (vertex*)Mesh::Transform(
-                Cur, Mesh::BuildQuad(Cur, VerticesEnd, Descriptor),
-                Descriptor, Mat4::Translate({ 0.f, 0.f, -0.5f }));
-            // BACK FACE
-            Cur = (vertex*)Mesh::Transform(
-                Cur, Mesh::BuildQuad(Cur, VerticesEnd, Descriptor),
-                Descriptor, Mat4::RotateY(Math::Pi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
-            // RIGHT FACE
-            Cur = (vertex*)Mesh::Transform(
-                Cur, Mesh::BuildQuad(Cur, VerticesEnd, Descriptor),
-                Descriptor, Mat4::RotateY(Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
-            // LEFT FACE
-            Cur = (vertex*)Mesh::Transform(
-                Cur, Mesh::BuildQuad(Cur, VerticesEnd, Descriptor),
-                Descriptor, Mat4::RotateY(-Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
-            // TOP FACE
-            Cur = (vertex*)Mesh::Transform(
-                Cur, Mesh::BuildQuad(Cur, VerticesEnd, Descriptor),
-                Descriptor, Mat4::RotateY(-Math::HalfPi()) * Mat4::RotateX(Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
-            // BOTTOM FACE
-            Cur = (vertex*)Mesh::Transform(
-                Cur, Mesh::BuildQuad(Cur, VerticesEnd, Descriptor),
-                Descriptor, Mat4::RotateY(-Math::HalfPi()) * Mat4::RotateX(-Math::HalfPi()) * Mat4::Translate({ 0.f, 0.f, -0.5f }));
-            
+            Cur = (vertex*)Mesh::BuildInvertedCube(Cur, VerticesEnd, Descriptor);
+
             this->SkyboxCount = (int)(Cur - VerticesStart) - this->SkyboxStart;
         }
 
@@ -159,16 +136,12 @@ demo_pg_skybox::demo_pg_skybox()
         // Load 6 textures
         for (int i = 0; i < 6; ++i)
         {
-            int Width, Height;
-            stbi_set_flip_vertically_on_load(1);
-            uint8_t* Image = stbi_load(SkyboxFiles[i], &Width, &Height, nullptr, STBI_rgb);
             glBindTexture(GL_TEXTURE_2D, SkyboxTextures[i]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, Image);
+            GL::UploadTexture(SkyboxFiles[i], IMG_FLIP | IMG_FORCE_RGB);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            stbi_image_free(Image);
         }
     }
     
@@ -251,5 +224,10 @@ void demo_pg_skybox::Update(const platform_io& IO)
         ImGui::Text("Position: (%.2f, %.2f, %.2f)", Camera.Position.x, Camera.Position.y, Camera.Position.z);
         ImGui::Text("Pitch: %.2f", Math::ToDegrees(Camera.Pitch));
         ImGui::Text("Yaw: %.2f", Math::ToDegrees(Camera.Yaw));
+    }
+
+    if (ImGui::CollapsingHeader("Shader"))
+    {
+        GLImGui::InspectProgram(Program);
     }
 }

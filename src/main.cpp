@@ -44,8 +44,16 @@ struct app
     keyboard Keyboard = {};
 };
 
+
+
+
+
 // Update platform IO from glfw
-void GLFWPlatformIOUpdate(GLFWwindow* Window, platform_io* IO)
+
+
+void GLFWPlatformIOUpdate(GLFWwindow* Window
+
+, platform_io* IO)
 {
     // Time calculation
     {

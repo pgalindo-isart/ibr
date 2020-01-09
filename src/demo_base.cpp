@@ -16,6 +16,7 @@ struct vertex
 };
 
 static const char* gVertexShaderStr = R"GLSL(
+#line 19
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 normal;
@@ -54,9 +55,9 @@ void main()
     
     // Apply a phong light shading (converting its position to modelView)
     // In real case, we do not use gDefaultLight and precompute the light ViewPosition
-    Light light = gDefaultLight;
+    light light = gDefaultLight;
     light.position = aViewMatrix * gDefaultLight.position;
-    color = shade(light, aViewPos, normalize(aViewNormal));
+    color = light_shade(light, aViewPos, normalize(aViewNormal));
 })GLSL";
 
 static void GenerateCheckerboard(v4* Texels, int Width, int Height, int SquareSize)
@@ -205,5 +206,10 @@ void demo_base::Update(const platform_io& IO)
         ImGui::Text("Position: (%.2f, %.2f, %.2f)", Camera.Position.x, Camera.Position.y, Camera.Position.z);
         ImGui::Text("Pitch: %.2f", Math::ToDegrees(Camera.Pitch));
         ImGui::Text("Yaw: %.2f", Math::ToDegrees(Camera.Yaw));
+    }
+
+    if (ImGui::CollapsingHeader("Shader"))
+    {
+        GLImGui::InspectProgram(Program);
     }
 }
