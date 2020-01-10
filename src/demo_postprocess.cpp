@@ -65,8 +65,9 @@ static demo_postprocess::framebuffer CreateFramebuffer(int ScreenWidth, int Scre
 
 static void DeleteFramebuffer(const demo_postprocess::framebuffer& Framebuffer)
 {
-	glDeleteTextures(1, &Framebuffer.ColorTexture);
-	glDeleteFramebuffers(1, &Framebuffer.FBO);
+    glDeleteRenderbuffers(1, &Framebuffer.DepthStencilRenderbuffer);
+    glDeleteTextures(1, &Framebuffer.ColorTexture);
+    glDeleteFramebuffers(1, &Framebuffer.FBO);
 }
 
 // ================================================================================================
