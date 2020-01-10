@@ -1,3 +1,5 @@
+#pragma once
+
 #include "opengl_headers.h"
 #include "types.h"
 
@@ -12,11 +14,11 @@ enum image_flags
 namespace GL
 {
     // Same data format than the shader light structure
-    struct Light
+    struct light
     {
         v4 Position;
-        v3 Ambient;
-        v3 Diffuse;
+        v3 Ambient; float _Pad0;
+        v3 Diffuse; float _Pad1;
         v3 Specular;
         float Shininess;
         float Attenuation[3];

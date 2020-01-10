@@ -19,29 +19,35 @@ struct vertex
 // Shaders
 // ==================================================
 static const char* gVertexShaderStr = R"GLSL(
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec2 uv;
+// Attributes
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec2 aUV;
 
-// varyings (variables that are passed to fragment shader with perspective interpolation)
-out vec2 vUV;
-
+// Uniforms
 uniform mat4 uModelViewProj;
+
+// Varyings (variables that are passed to fragment shader with perspective interpolation)
+out vec2 vUV;
 
 void main()
 {
-    vUV = uv;
-    gl_Position = uModelViewProj * vec4(position, 1.0);
+    vUV = aUV;
+    gl_Position = uModelViewProj * vec4(aPosition, 1.0);
 })GLSL";
 
 static const char* gFragmentShaderStr = R"GLSL(
+// Varyings
 in vec2 vUV;
-out vec4 color;
 
+// Uniforms
 uniform sampler2D uColorTexture;
+
+// Shader outputs
+out vec4 oColor;
 
 void main()
 {
-    color = texture(uColorTexture, vUV);
+    oColor = texture(uColorTexture, vUV);
 })GLSL";
 
 demo_minimal::demo_minimal()

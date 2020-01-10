@@ -14,9 +14,9 @@ using namespace GL;
 static const char* PhongLightingStr = R"GLSL(
 // =================================
 // PHONG SHADER START ===============
+// Light structure
 struct light
 {
-    bool enabled;
     vec4 position;
     vec3 ambient;
     vec3 diffuse;
@@ -27,13 +27,14 @@ struct light
 
 // Default light
 light gDefaultLight = light(
-    true,
     vec4(1.0, 2.5, 0.0, 1.0),
     vec3(0.2, 0.2, 0.2),
     vec3(0.8, 0.8, 0.8),
     vec3(0.9, 0.9, 0.9),
     64.0,
     float[3](1.0, 0.0, 0.0));
+
+// Phong shading function
 vec3 light_shade(light light, vec3 position, vec3 normal)
 {
     vec3 lightDir;
@@ -440,89 +441,112 @@ void GLImGui::InspectProgram(GLuint program)
 			GLuint bufferBinding = 0;
 			GLint blockIndex;
 			GLint blockOffset = 0;
+			GLint blockSize = 0;
 			glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_BLOCK_INDEX, &blockIndex);
 			if (blockIndex != -1)
 			{
 				glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_OFFSET, &blockOffset);
+				glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE, &blockSize);
 				glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, blockIndex, (GLint*)&bufferBinding);
 			}
 
-			GLint location = -1;
-			location = glGetUniformLocation(program, name);
-			ImGui::Text("[%d:%s] location=%d, size=%d, type=0x%x, blockIndex=%d, bufferBinding=%d", index, name, location, size, type, blockIndex, bufferBinding);
+			GLint uniformSize;
+			glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE, &uniformSize);
 
-			if (location != -1)
+			GLchar arrayName[1024];
+			if (uniformSize > 1)
 			{
-				if (type == GL_BOOL)
-				{
-					GLint currentValue;
-					glGetUniformiv(program, location, &currentValue);
-					if (ImGui::Checkbox(name, (bool*)&currentValue))
-						glUniform1i(location, currentValue);
-				}
-				else if (type == GL_FLOAT)
-				{
-					GLfloat currentValue;
-					glGetUniformfv(program, location, &currentValue);
-					if (ImGui::DragFloat(name, &currentValue, 0.001f))
-						glUniform1f(location, currentValue);
-				}
-				else if (type == GL_FLOAT_VEC2)
-				{
-					GLfloat currentValue[2];
-					glGetUniformfv(program, location, currentValue);
-					if (ImGui::DragFloat2(name, currentValue, 0.001f))
-						glUniform2f(location, currentValue[0], currentValue[1]);
-				}
-				else if (type == GL_FLOAT_VEC3)
-				{
-					GLfloat currentValue[3];
-					glGetUniformfv(program, location, currentValue);
-					if ((!AsColor && ImGui::DragFloat3(name, currentValue, 0.001f)) ||
-						(AsColor && ImGui::ColorEdit3(name, currentValue)))
-						glUniform3f(location, currentValue[0], currentValue[1], currentValue[2]);
-				}
-				else if (type == GL_FLOAT_VEC4)
-				{
-					GLfloat currentValue[4];
-					glGetUniformfv(program, location, currentValue);
-					if (ImGui::DragFloat4(name, currentValue, 0.001f))
-						glUniform4f(location, currentValue[0], currentValue[1], currentValue[2], currentValue[3]);
-				}
+				strcpy(arrayName, name);
+				arrayName[strlen(arrayName) - 3] = '\0';
 			}
-			else if (bufferBinding != 0)
+
+			// ===========================
+			// TODO: Remove this crazyness (especially uniform array access)
+			// ===========================
+			for (int uniformArrayIndex = 0; uniformArrayIndex < uniformSize; ++uniformArrayIndex)
 			{
-				glBindBuffer(GL_UNIFORM_BUFFER, bufferBinding);
-				if (type == GL_FLOAT)
+				if (uniformSize > 1)
 				{
-					GLfloat currentValue;
-					glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset, sizeof(GLfloat), &currentValue);
-					if (ImGui::DragFloat(name, &currentValue, 0.001f))
-						glBufferSubData(GL_UNIFORM_BUFFER, blockOffset, sizeof(GLfloat), &currentValue);
+					sprintf(name, "%s[%d]", arrayName, uniformArrayIndex);
 				}
-				else if (type == GL_FLOAT_VEC2)
+
+				GLint location = -1;
+				location = glGetUniformLocation(program, name);
+				ImGui::Text("[%d:%s] location=%d, size=%d, type=0x%x, blockIndex=%d, bufferBinding=%d", index, name, location, size, type, blockIndex, bufferBinding);
+
+				if (location != -1)
 				{
-					GLfloat currentValue[2];
-					glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset, 2 * sizeof(GLfloat), &currentValue);
-					if (ImGui::DragFloat3(name, currentValue, 0.001f))
-						glBufferSubData(GL_UNIFORM_BUFFER, blockOffset, 2 * sizeof(GLfloat), &currentValue);
+					if (type == GL_BOOL)
+					{
+						GLint currentValue;
+						glGetUniformiv(program, location, &currentValue);
+						if (ImGui::Checkbox(name, (bool*)&currentValue))
+							glUniform1i(location, currentValue);
+					}
+					else if (type == GL_FLOAT)
+					{
+						GLfloat currentValue;
+						glGetUniformfv(program, location, &currentValue);
+						if (ImGui::DragFloat(name, &currentValue, 0.001f))
+							glUniform1f(location, currentValue);
+					}
+					else if (type == GL_FLOAT_VEC2)
+					{
+						GLfloat currentValue[2];
+						glGetUniformfv(program, location, currentValue);
+						if (ImGui::DragFloat2(name, currentValue, 0.001f))
+							glUniform2f(location, currentValue[0], currentValue[1]);
+					}
+					else if (type == GL_FLOAT_VEC3)
+					{
+						GLfloat currentValue[3];
+						glGetUniformfv(program, location, currentValue);
+						if ((!AsColor && ImGui::DragFloat3(name, currentValue, 0.001f)) ||
+							(AsColor && ImGui::ColorEdit3(name, currentValue)))
+							glUniform3f(location, currentValue[0], currentValue[1], currentValue[2]);
+					}
+					else if (type == GL_FLOAT_VEC4)
+					{
+						GLfloat currentValue[4];
+						glGetUniformfv(program, location, currentValue);
+						if (ImGui::DragFloat4(name, currentValue, 0.001f))
+							glUniform4f(location, currentValue[0], currentValue[1], currentValue[2], currentValue[3]);
+					}
 				}
-				else if (type == GL_FLOAT_VEC3)
+				else if (bufferBinding != 0)
 				{
-					GLfloat currentValue[3];
-					glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset, 3 * sizeof(GLfloat), &currentValue);
-					if ((!AsColor && ImGui::DragFloat3(name, currentValue, 0.001f)) ||
-						(AsColor && ImGui::ColorEdit3(name, currentValue)))
-						glBufferSubData(GL_UNIFORM_BUFFER, blockOffset, 3 * sizeof(GLfloat), &currentValue);
+					glBindBuffer(GL_UNIFORM_BUFFER, bufferBinding);
+					if (type == GL_FLOAT)
+					{
+						GLfloat currentValue;
+						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), sizeof(GLfloat), &currentValue);
+						if (ImGui::DragFloat(name, &currentValue, 0.001f))
+							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), sizeof(GLfloat), &currentValue);
+					}
+					else if (type == GL_FLOAT_VEC2)
+					{
+						GLfloat currentValue[2];
+						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 2 * sizeof(GLfloat), &currentValue);
+						if (ImGui::DragFloat3(name, currentValue, 0.001f))
+							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 2 * sizeof(GLfloat), &currentValue);
+					}
+					else if (type == GL_FLOAT_VEC3)
+					{
+						GLfloat currentValue[3];
+						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 3 * sizeof(GLfloat), &currentValue);
+						if ((!AsColor && ImGui::DragFloat3(name, currentValue, 0.001f)) ||
+							(AsColor && ImGui::ColorEdit3(name, currentValue)))
+							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 3 * sizeof(GLfloat), &currentValue);
+					}
+					else if (type == GL_FLOAT_VEC4)
+					{
+						GLfloat currentValue[4];
+						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 4 * sizeof(GLfloat), &currentValue);
+						if (ImGui::DragFloat3(name, currentValue, 0.001f))
+							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 4 * sizeof(GLfloat), &currentValue);
+					}
+					glBindBuffer(GL_UNIFORM_BUFFER, 0);
 				}
-				else if (type == GL_FLOAT_VEC4)
-				{
-					GLfloat currentValue[4];
-					glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset, 4 * sizeof(GLfloat), &currentValue);
-					if (ImGui::DragFloat3(name, currentValue, 0.001f))
-						glBufferSubData(GL_UNIFORM_BUFFER, blockOffset, 4 * sizeof(GLfloat), &currentValue);
-				}
-				glBindBuffer(GL_UNIFORM_BUFFER, 0);
 			}
 			ImGui::PopID();
 		}

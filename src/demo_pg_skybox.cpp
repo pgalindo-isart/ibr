@@ -16,29 +16,37 @@ struct vertex
 };
 
 static const char* gVertexShaderStr = R"GLSL(
-#line 20
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec2 uv;
+// Attributes
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec2 aUV;
+
+// Uniforms
 uniform mat4 uProjection;
 uniform mat4 uView;
 uniform mat4 uModel;
 
-out vec2 aUV;
+// Varyings
+out vec2 vUV;
 
 void main()
 {
-    aUV = uv;
-    gl_Position = uProjection * uView * uModel * vec4(position, 1.0);
+    vUV = aUV;
+    gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
 })GLSL";
 
 static const char* gFragmentShaderStr = R"GLSL(
-#line 36
-uniform sampler2D colorTexture;
-in vec2 aUV;
-out vec4 color;
+// Varyings
+in vec2 vUV;
+
+// Uniforms
+uniform sampler2D uColorTexture;
+
+// Shader outputs
+out vec4 oColor;
+
 void main()
 {
-    color = texture(colorTexture, aUV);
+    oColor = texture(uColorTexture, vUV);
 })GLSL";
 
 demo_pg_skybox::demo_pg_skybox()

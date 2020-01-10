@@ -3,6 +3,7 @@
 #include "demo.h"
 
 #include "opengl_headers.h"
+#include "opengl_helpers.h"
 
 #include "camera.h"
 
@@ -22,6 +23,11 @@ private:
     GLuint Program = 0;
     GLuint MeshBuffer = 0;
     GLuint VAO = 0;
+    GLuint LightUniformBuffer = 0;
 
     GLuint Texture = 0;
+
+    GL::light Light = {};
+    bool LightAutoMove = true;
+    v4 LightWorldPosition = { 0.f, 0.f, 0.f, 1.f };
 };

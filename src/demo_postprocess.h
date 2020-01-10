@@ -6,6 +6,8 @@
 
 #include "camera.h"
 
+#include "demo_base.h"
+
 class demo_postprocess : public demo
 {
 public:
@@ -17,19 +19,10 @@ public:
         GLuint DepthStencilRenderbuffer;
     };
 
-    // Render some geometry
-    struct first_pass_data
-    {
-        GLuint Program = 0;
-        GLuint VAO = 0;
-        GLuint VertexBuffer = 0;
-        GLuint MeshStart = 0;
-        GLuint MeshEnd = 0;
-        GLuint Texture = 0;
-    };
+    // First pass is the render inside demo_base::Update()
 
-    // Used to render a quad
-    struct second_pass_data
+    // Second pass (color transformation)
+    struct postprocess_pass_data
     {
         GLuint Program = 0;
         GLuint VAO = 0;
@@ -46,7 +39,7 @@ private:
     // 3d camera
     camera Camera = {};
 
-    first_pass_data FirstPassData = {};
-    second_pass_data SecondPassData = {};
+    demo_base DemoBase = {};
+    postprocess_pass_data PostProcessPassData = {};
     framebuffer Framebuffer = {};
 };
