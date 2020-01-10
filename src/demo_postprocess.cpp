@@ -80,48 +80,57 @@ struct mesh_vertex
 };
 
 static const char* gMeshVertexShaderStr = R"GLSL(
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec2 uv;
-layout(location = 2) in vec3 normal;
+// Attributes
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec2 aUV;
+layout(location = 2) in vec3 aNormal;
 
+// Uniforms
 uniform float uTime;
 uniform mat4 uProjection;
 uniform mat4 uView;
 uniform mat4 uModel;
+uniform mat4 uModelView;
+uniform mat4 uModelViewProj;
 
-out vec2 aUV;
-out vec3 aViewPos;
-out vec3 aViewNormal;
-out mat4 aViewMatrix;
+// Varyings
+out vec2 vUV;
+out vec3 vViewPos;
+out vec3 vViewNormal;
+out mat4 vViewMatrix;
 
 void main()
 {
-    aUV = uv;
-    mat4 modelView = uView * uModel;
-    aViewPos = (modelView * vec4(position, 1.0)).xyz;
-    aViewNormal = (modelView * vec4(normal, 0.0)).xyz;
-    aViewMatrix = uView;
-    gl_Position = uProjection * uView * uModel * vec4(position, 1.0);
+    vUV = aUV;
+    vViewPos = (uModelView * vec4(aPosition, 1.0)).xyz;
+    vViewMatrix = uView;
+    vViewNormal = (uModelView * vec4(aNormal, 0.0)).xyz; // We should use the normal matrix in case of non-linear transforms
+    gl_Position = uModelViewProj * vec4(aPosition, 1.0);
 })GLSL";
 
 static const char* gMeshFragmentShaderStr = R"GLSL(
-uniform sampler2D colorTexture;
-in vec2 aUV;
-in vec3 aViewPos;
-in vec3 aViewNormal;
-in mat4 aViewMatrix;
-out vec3 color;
+// Uniforms
+uniform sampler2D uColorTexture;
 uniform float uTime;
+
+// Varyings
+in vec2 vUV;
+in vec3 vViewPos;
+in vec3 vViewNormal;
+in mat4 vViewMatrix;
+
+// Shader outputs
+out vec3 oColor;
 
 void main()
 {
-    color = texture(colorTexture, aUV).rgb;
+    oColor = texture(uColorTexture, vUV).rgb;
     
     // Apply a phong light shading (converting its position to modelView)
     // In real case, we do not use gDefaultLight and precompute the light ViewPosition
-    light light = gDefaultLight;
-    light.position = aViewMatrix * gDefaultLight.position;
-    color *= light_shade(light, aViewPos, normalize(aViewNormal));
+    light light = gDefaultLight; // Copy light and transform world pos to view
+    light.position = vViewMatrix * gDefaultLight.position;
+    oColor *= light_shade(light, vViewPos, normalize(vViewNormal));
 })GLSL";
 
 static demo_postprocess::first_pass_data CreateFirstPass()
@@ -214,13 +223,16 @@ static void DrawFirstPass(const demo_postprocess::first_pass_data& Data, const p
     glUniform1f(glGetUniformLocation(Data.Program, "uTime"), (float)IO.Time);
 
     mat4 ProjectionTransform = Mat4::Perspective(Math::ToRadians(60.f), AspectRatio, 0.1f, 100.f);
-    glUniformMatrix4fv(glGetUniformLocation(Data.Program, "uProjection"), 1, GL_FALSE, ProjectionTransform.e);
-
     mat4 ViewTransform = CameraGetInverseMatrix(Camera);
-    glUniformMatrix4fv(glGetUniformLocation(Data.Program, "uView"), 1, GL_FALSE, ViewTransform.e);
+    mat4 ModelTransform = Mat4::Translate({ 0.f, 0.f, -2.f });
+    mat4 ModelViewTransform = ViewTransform * ModelTransform;
+    mat4 ModelViewProjTransform = ProjectionTransform * ModelViewTransform;
 
-    mat4 MeshTransform = Mat4::Translate({ 0.f, 0.f, -2.f });
-    glUniformMatrix4fv(glGetUniformLocation(Data.Program, "uModel"), 1, GL_FALSE, MeshTransform.e);
+    glUniformMatrix4fv(glGetUniformLocation(Data.Program, "uProjection"), 1, GL_FALSE, ProjectionTransform.e);
+    glUniformMatrix4fv(glGetUniformLocation(Data.Program, "uView"), 1, GL_FALSE, ViewTransform.e);
+    glUniformMatrix4fv(glGetUniformLocation(Data.Program, "uModel"), 1, GL_FALSE, ModelTransform.e);
+    glUniformMatrix4fv(glGetUniformLocation(Data.Program, "uModelView"), 1, GL_FALSE, ModelViewTransform.e);
+    glUniformMatrix4fv(glGetUniformLocation(Data.Program, "uModelViewProj"), 1, GL_FALSE, ModelViewProjTransform.e);
 
 	glBindVertexArray(Data.VAO);
 	glBindTexture(GL_TEXTURE_2D, Data.Texture);
@@ -232,36 +244,44 @@ static void DrawFirstPass(const demo_postprocess::first_pass_data& Data, const p
 // ================================================================================================
 struct quad_vertex
 {
-    v3 Position;
+    v2 Position;
     v2 UV;
 };
 
 static const char* gQuadVertexShaderStr = R"GLSL(
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec2 uv;
-out vec2 aUV;
+// Attributes
+layout(location = 0) in vec2 aPosition;
+layout(location = 1) in vec2 aUV;
+
+// Varyings
+out vec2 vUV;
 
 void main()
 {
-    aUV = uv;
-    gl_Position = vec4(position, 1.0);
+    vUV = aUV;
+    gl_Position = vec4(aPosition, 0.0, 1.0);
 })GLSL";
 
 static const char* gQuadFragmentShaderStr = R"GLSL(
-in vec2 aUV;
-out vec4 color;
-uniform sampler2D colorTexture;
+// Varyings
+in vec2 vUV;
+
+// Uniforms
+uniform sampler2D uColorTexture;
 uniform float uTime;
 uniform mat4 uColorTransform;
+
+// Outputs
+out vec4 oColor;
 
 void main()
 {
     // Treat color like a homogeneous vector
-    vec4 rgb4 = vec4(texture(colorTexture, aUV).rgb, 1.0);
+    vec4 rgb4 = vec4(texture(uColorTexture, vUV).rgb, 1.0);
 
     // Transform color
-    color.rgb = (uColorTransform * rgb4).rgb;
-    color.a = rgb4.a;
+    oColor.rgb = (uColorTransform * rgb4).rgb;
+    oColor.a = rgb4.a;
 })GLSL";
 
 static demo_postprocess::second_pass_data CreateSecondPass()
@@ -270,17 +290,18 @@ static demo_postprocess::second_pass_data CreateSecondPass()
 
     Data.Program = GL::CreateProgram(gQuadVertexShaderStr, gQuadFragmentShaderStr);
 
-    // Gen mesh
+    // Gen unit quad
     {
-        vertex_descriptor Descriptor = {};
-        Descriptor.Stride = sizeof(quad_vertex);
-        Descriptor.HasUV = true;
-        Descriptor.PositionOffset = OFFSETOF(quad_vertex, Position);
-        Descriptor.UVOffset = OFFSETOF(quad_vertex, UV);
+        quad_vertex Quad[6] =
+        {
+            { {-1.f,-1.f }, { 0.f, 0.f } }, // bl
+            { { 1.f,-1.f }, { 1.f, 0.f } }, // br
+            { { 1.f, 1.f }, { 1.f, 1.f } }, // tr
 
-        mesh_vertex Quad[6];
-
-        Mesh::Transform(Quad, Mesh::BuildQuad(Quad, Quad + 6, Descriptor), Descriptor, Mat4::Scale({ 2.f, 2.f, 2.f }));
+            { {-1.f, 1.f }, { 0.f, 1.f } }, // tl
+            { {-1.f,-1.f }, { 0.f, 0.f } }, // bl
+            { { 1.f, 1.f }, { 1.f, 1.f } }, // tr
+        };
 
         // Upload mesh to gpu
         glGenBuffers(1, &Data.VertexBuffer);
@@ -346,8 +367,9 @@ enum class color_transform : int
     CUSTOM
 };
 
-static mat4 GetColorTransformMatrix()
+static mat4 DebugUI_GetColorTransformMatrix()
 {
+    // Using static variable only for debug purpose!
     static color_transform ColorTransformMode = color_transform::IDENTITY;
     ImGui::RadioButton("Identity",  (int*)&ColorTransformMode, (int)color_transform::IDENTITY);
     ImGui::RadioButton("GrayScale", (int*)&ColorTransformMode, (int)color_transform::GRAYSCALE);
@@ -447,5 +469,5 @@ void demo_postprocess::Update(const platform_io& IO)
         ImGui::TreePop();
     }
 
-    SecondPassData.ColorTransform = GetColorTransformMatrix();
+    SecondPassData.ColorTransform = DebugUI_GetColorTransformMatrix();
 }
