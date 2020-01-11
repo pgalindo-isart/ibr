@@ -16,6 +16,7 @@ struct v3
     union
     {
         struct { float x, y, z; };
+        struct { float r, g, b; };
         float e[3];
     };
 };
@@ -25,7 +26,9 @@ struct v4
     union
     {
         struct { float x, y, z, w; };
+        struct { float r, g, b, a; };
         v3 xyz;
+        v3 rgb;
         float e[4];
     };
 };

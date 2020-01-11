@@ -1,10 +1,13 @@
 
 #include <cstdio>
 #include <vector>
+#include <string>
+#include <map>
 
 #include "imgui.h"
 #include "stb_image.h"
 #include "platform.h"
+#include "mesh.h"
 
 #include "opengl_helpers.h"
 
@@ -12,11 +15,13 @@ using namespace GL;
 
 // Light shader function
 static const char* PhongLightingStr = R"GLSL(
+#line 16
 // =================================
 // PHONG SHADER START ===============
 // Light structure
 struct light
 {
+	bool enabled;
     vec4 position;
     vec3 ambient;
     vec3 diffuse;
@@ -27,6 +32,7 @@ struct light
 
 // Default light
 light gDefaultLight = light(
+	true,
     vec4(1.0, 2.5, 0.0, 1.0),
     vec3(0.2, 0.2, 0.2),
     vec3(0.8, 0.8, 0.8),
@@ -37,6 +43,9 @@ light gDefaultLight = light(
 // Phong shading function
 vec3 light_shade(light light, vec3 position, vec3 normal)
 {
+	if (!light.enabled)
+		return vec3(0.0, 0.0, 0.0);
+
     vec3 lightDir;
     float attenuation = 1.0;
     if (light.position.w > 0.0)
@@ -71,47 +80,61 @@ vec3 light_shade(light light, vec3 position, vec3 normal)
 // =================================
 )GLSL";
 
+GLuint GL::CompileShaderEx(GLenum ShaderType, int ShaderStrsCount, const char** ShaderStrs, bool InjectLightShading)
+{
+	GLuint Shader = glCreateShader(ShaderType);
+
+	std::vector<const char*> Sources;
+	Sources.reserve(4);
+	Sources.push_back("#version 330 core");
+
+	if (InjectLightShading)
+		Sources.push_back(PhongLightingStr);
+
+	for (int i = 0; i < ShaderStrsCount; ++i)
+		Sources.push_back(ShaderStrs[i]);
+
+	glShaderSource(Shader, (GLsizei)Sources.size(), &Sources[0], nullptr);
+	glCompileShader(Shader);
+
+	GLint CompileStatus;
+	glGetShaderiv(Shader, GL_COMPILE_STATUS, &CompileStatus);
+	if (CompileStatus == GL_FALSE)
+	{
+		char Infolog[1024];
+		glGetShaderInfoLog(Shader, ARRAY_SIZE(Infolog), nullptr, Infolog);
+		fprintf(stderr, "Shader error: %s\n", Infolog);
+	}
+
+	return Shader;
+}
+
 GLuint GL::CompileShader(GLenum ShaderType, const char* ShaderStr, bool InjectLightShading)
 {
-    GLuint Shader = glCreateShader(ShaderType);
+	return GL::CompileShaderEx(ShaderType, 1, &ShaderStr, InjectLightShading);
+}
 
-    const char* Sources[] = {
-        "#version 330 core",
-		InjectLightShading ? PhongLightingStr : "",
-        ShaderStr,
-    };
+GLuint GL::CreateProgramEx(int VSStringsCount, const char** VSStrings, int FSStringsCount, const char** FSStrings, bool InjectLightShading)
+{
+	GLuint Program = glCreateProgram();
 
-    glShaderSource(Shader, ARRAY_SIZE(Sources), Sources, nullptr);
-    glCompileShader(Shader);
+	GLuint VertexShader = GL::CompileShaderEx(GL_VERTEX_SHADER, VSStringsCount, VSStrings);
+	GLuint FragmentShader = GL::CompileShaderEx(GL_FRAGMENT_SHADER, FSStringsCount, FSStrings, InjectLightShading);
 
-    GLint CompileStatus;
-    glGetShaderiv(Shader, GL_COMPILE_STATUS, &CompileStatus);
-    if (CompileStatus == GL_FALSE)
-    {
-        char Infolog[1024];
-        glGetShaderInfoLog(Shader, ARRAY_SIZE(Infolog), nullptr, Infolog);
-        fprintf(stderr, "Shader error: %s\n", Infolog);
-    }
+	glAttachShader(Program, VertexShader);
+	glAttachShader(Program, FragmentShader);
 
-    return Shader;
+	glLinkProgram(Program);
+
+	glDeleteShader(VertexShader);
+	glDeleteShader(FragmentShader);
+
+	return Program;
 }
 
 GLuint GL::CreateProgram(const char* VSString, const char* FSString, bool InjectLightShading)
 {
-    GLuint Program = glCreateProgram();
-
-    GLuint VertexShader         = GL::CompileShader(GL_VERTEX_SHADER, VSString);
-    GLuint FragmentShader       = GL::CompileShader(GL_FRAGMENT_SHADER, FSString, InjectLightShading);
-
-    glAttachShader(Program, VertexShader);
-    glAttachShader(Program, FragmentShader);
-
-    glLinkProgram(Program);
-
-    glDeleteShader(VertexShader);
-    glDeleteShader(FragmentShader);
-
-    return Program;
+	return GL::CreateProgramEx(1, &VSString, 1, &FSString, InjectLightShading);
 }
 
 void GL::UploadTexture(const char* Filename, int ImageFlags, int* WidthOut, int* HeightOut)
@@ -170,6 +193,109 @@ void GL::UploadCheckerboardTexture(int Width, int Height, int SquareSize)
 	}
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Width, Width, 0, GL_RGBA, GL_FLOAT, &Texels[0]);
+}
+
+struct gl_cache_data
+{
+	struct mesh
+	{
+		GLuint VertexBuffer;
+		int Size;
+	};
+
+	struct texture_identifier
+	{
+		std::string Filename;
+		int ImageFlags;
+
+		bool operator==(const texture_identifier& Other) const
+		{
+			return Filename == Other.Filename && ImageFlags == Other.ImageFlags;
+		}
+
+		bool operator<(const texture_identifier& Other) const
+		{
+			return Filename < Other.Filename;
+		}
+	};
+
+	struct texture
+	{
+		GLuint TextureID;
+		int Width;
+		int Height;
+	};
+
+	std::vector<vertex_full> TmpBuffer;
+	std::map<std::string, mesh> VertexBufferMap;
+	std::map<texture_identifier, texture> TextureMap;
+};
+
+void GLCache::Init()
+{
+	CacheData = new gl_cache_data();
+}
+
+void GLCache::Destroy()
+{
+	delete CacheData;
+}
+
+GLuint GLCache::LoadObj(const char* Filename, float Scale, int* VertexCountOut)
+{
+	assert(CacheData != nullptr);
+
+	auto Found = CacheData->VertexBufferMap.find(Filename);
+	if (Found != CacheData->VertexBufferMap.end())
+	{
+		if (VertexCountOut)
+			*VertexCountOut = Found->second.Size;
+		return Found->second.VertexBuffer;
+	}
+
+	CacheData->TmpBuffer.clear();
+	Mesh::LoadObjNoConvertion(CacheData->TmpBuffer, Filename, Scale);
+
+	// Upload mesh to gpu
+	GLuint MeshBuffer = 0;
+	glGenBuffers(1, &MeshBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, MeshBuffer);
+	glBufferData(GL_ARRAY_BUFFER, CacheData->TmpBuffer.size() * sizeof(vertex_full), &CacheData->TmpBuffer[0], GL_STATIC_DRAW);
+
+	if (VertexCountOut)
+		*VertexCountOut = (int)CacheData->TmpBuffer.size();
+	
+	CacheData->VertexBufferMap[Filename] = { MeshBuffer, (int)CacheData->TmpBuffer.size() };
+
+	return MeshBuffer;
+}
+
+GLuint GLCache::LoadTexture(const char* Filename, int ImageFlags, int* WidthOut, int* HeightOut)
+{
+	assert(CacheData != nullptr);
+
+	gl_cache_data::texture_identifier TextureIdentifier = { Filename, ImageFlags };
+	
+	auto Found = CacheData->TextureMap.find(TextureIdentifier);
+	if (Found != CacheData->TextureMap.end())
+	{
+		if (WidthOut)  *WidthOut  = Found->second.Width;
+		if (HeightOut) *HeightOut = Found->second.Height;
+		return Found->second.TextureID;
+	}
+
+	GLuint Texture;
+	glGenTextures(1, &Texture);
+	glBindTexture(GL_TEXTURE_2D, Texture);
+	int Width, Height;
+	GL::UploadTexture(Filename, ImageFlags, &Width, &Height);
+
+	if (WidthOut)  *WidthOut  = Width;
+	if (HeightOut) *HeightOut = Height;
+
+	CacheData->TextureMap[TextureIdentifier] = { Texture, Width, Height };
+
+	return Texture;
 }
 
 static void DebugGLBoolText(const char* Name, GLint value, bool color = true)
@@ -516,6 +642,13 @@ void GLImGui::InspectProgram(GLuint program)
 				else if (bufferBinding != 0)
 				{
 					glBindBuffer(GL_UNIFORM_BUFFER, bufferBinding);
+					if (type == GL_BOOL)
+					{
+						GLint currentValue;
+						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLint), sizeof(GLint), &currentValue);
+						if (ImGui::Checkbox(name, (bool*)&currentValue))
+							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLint), sizeof(GLint), &currentValue);
+					}
 					if (type == GL_FLOAT)
 					{
 						GLfloat currentValue;

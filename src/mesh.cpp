@@ -13,20 +13,13 @@
 
 using namespace Mesh;
 
-struct base_vertex
-{
-    v3 Position;
-    v3 Normal;
-    v2 UV;
-};
-
-static void* ConvertVertices(void* VerticesDst, const vertex_descriptor& Descriptor, base_vertex* VerticesSrc, int Count)
+static void* ConvertVertices(void* VerticesDst, const vertex_descriptor& Descriptor, vertex_full* VerticesSrc, int Count)
 {
     uint8_t* Buffer = (uint8_t*)VerticesDst;
 
     for (int i = 0; i < Count; ++i)
     {
-        base_vertex& VertexSrc = VerticesSrc[i];
+        vertex_full& VertexSrc = VerticesSrc[i];
         uint8_t* VertexStart = Buffer + i * Descriptor.Stride;
 
         v3* PositionDst = (v3*)(VertexStart + Descriptor.PositionOffset);
@@ -88,12 +81,12 @@ void* Mesh::BuildQuad(void* Vertices, void* End, const vertex_descriptor& Descri
 
     v3 Normal = { 0.f, 0.f, 1.f };
 
-    base_vertex TopLeft     = { { -0.5f, 0.5f, 0.f }, Normal, { 0.f, 1.f } };
-    base_vertex TopRight    = { {  0.5f, 0.5f, 0.f }, Normal, { 1.f, 1.f } };
-    base_vertex BottomLeft  = { { -0.5f,-0.5f, 0.f }, Normal, { 0.f, 0.f } };
-    base_vertex BottomRight = { {  0.5f,-0.5f, 0.f }, Normal, { 1.f, 0.f } };
+    vertex_full TopLeft     = { { -0.5f, 0.5f, 0.f }, Normal, { 0.f, 1.f } };
+    vertex_full TopRight    = { {  0.5f, 0.5f, 0.f }, Normal, { 1.f, 1.f } };
+    vertex_full BottomLeft  = { { -0.5f,-0.5f, 0.f }, Normal, { 0.f, 0.f } };
+    vertex_full BottomRight = { {  0.5f,-0.5f, 0.f }, Normal, { 1.f, 0.f } };
 
-    base_vertex QuadVertices[] = {
+    vertex_full QuadVertices[] = {
         TopLeft,
         BottomLeft,
         TopRight,
@@ -206,7 +199,7 @@ void* Mesh::BuildSphere(void* Vertices, void* End, const vertex_descriptor& Desc
             v3 P2 = { ThetaNextSin * PhiCos,     ThetaNextCos, ThetaNextSin * PhiSin     };
             v3 P3 = { ThetaNextSin * PhiNextCos, ThetaNextCos, ThetaNextSin * PhiNextSin };
 
-            base_vertex Quad[6];
+            vertex_full Quad[6];
 
             Quad[0].Position = Quad[0].Normal = P0;
             Quad[1].Position = Quad[1].Normal = P1;
@@ -236,13 +229,44 @@ void* Mesh::BuildSphere(void* Vertices, void* End, const vertex_descriptor& Desc
     return Mesh::Transform(Vertices, Cur, Descriptor, Mat4::Scale({ 0.5f, 0.5f, 0.5f }));
 }
 
-void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descriptor, const char* Filename, float Scale)
+// Implement dumb caching to avoid parsing .obj again and again
+bool LoadObjFromCache(std::vector<vertex_full>& Mesh, const char* Filename)
 {
-    bool HasNormals = false;
-    bool HasTexCoords = false;
+    std::string CachedFile = Filename;
+    CachedFile += ".cache";
 
-    std::vector<base_vertex> Mesh;
+    FILE* File = fopen(CachedFile.c_str(), "rb");
+    if (File == nullptr)
+        return false;
 
+    size_t VertexCount = 0;
+    fread(&VertexCount, sizeof(size_t), 1, File);
+    Mesh.resize(VertexCount);
+    fread(&Mesh[0], sizeof(vertex_full), VertexCount, File);
+    fclose(File);
+
+    printf("Loaded from cache: %s (%d vertices)\n", Filename, (int)VertexCount);
+
+    return true;
+}
+
+void SaveObjToCache(const std::vector<vertex_full>& Mesh, const char* Filename)
+{
+    std::string CachedFile = Filename;
+    CachedFile += ".cache";
+
+    FILE* File = fopen(CachedFile.c_str(), "wb");
+    size_t VertexCount = Mesh.size();
+    fwrite(&VertexCount, sizeof(size_t), 1, File);
+    fwrite(&Mesh[0], sizeof(vertex_full), VertexCount, File);
+    fclose(File);
+
+    printf("Saved to cache: %s (%d vertices)\n", Filename, (int)VertexCount);
+}
+
+bool Mesh::LoadObjNoConvertion(std::vector<vertex_full>& Mesh, const char* Filename, float Scale)
+{
+    if (!LoadObjFromCache(Mesh, Filename))
     {
         std::string Warn;
         std::string Err;
@@ -257,31 +281,31 @@ void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descript
         if (!Err.empty())
         {
             fprintf(stderr, "Error loading obj: %s\n", Err.c_str());
-            return Vertices;
+            return false;
         }
 
-        HasNormals = !Attrib.normals.empty();
-        HasTexCoords = !Attrib.texcoords.empty();
+        bool HasNormals = !Attrib.normals.empty();
+        bool HasTexCoords = !Attrib.texcoords.empty();
 
         // Build all meshes
         for (int MeshId = 0; MeshId < (int)Shapes.size(); ++MeshId)
         {
             const tinyobj::mesh_t& MeshDef = Shapes[MeshId].mesh;
-            
+
             int IndexId = 0;
             for (int FaceId = 0; FaceId < (int)MeshDef.num_face_vertices.size(); ++FaceId)
             {
                 int FaceVertices = MeshDef.num_face_vertices[FaceId];
                 assert(FaceVertices == 3);
-        
+
                 for (int j = 0; j < FaceVertices; ++j)
                 {
                     const tinyobj::index_t& Index = MeshDef.indices[IndexId];
-                    base_vertex V = {};
+                    vertex_full V = {};
                     V.Position = {
-                        Scale * Attrib.vertices[Index.vertex_index * 3 + 0],
-                        Scale * Attrib.vertices[Index.vertex_index * 3 + 1],
-                        Scale * Attrib.vertices[Index.vertex_index * 3 + 2]
+                        Attrib.vertices[Index.vertex_index * 3 + 0],
+                        Attrib.vertices[Index.vertex_index * 3 + 1],
+                        Attrib.vertices[Index.vertex_index * 3 + 2]
                     };
 
                     if (HasNormals)
@@ -300,47 +324,66 @@ void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descript
                             Attrib.texcoords[Index.texcoord_index * 2 + 1]
                         };
                     }
-                    
+
                     Mesh.push_back(V);
 
                     IndexId++;
                 }
             }
         }
-    }
 
-    // Build normals if missing
-    if (!HasNormals)
-    {
-        for (int i = 0; i < (int)Mesh.size(); i += 3)
+        // Build normals if missing
+        if (!HasNormals)
         {
-            base_vertex& V0 = Mesh[i+0];
-            base_vertex& V1 = Mesh[i+1];
-            base_vertex& V2 = Mesh[i+2];
-
-            v3 Normal = Vec3::Cross((V1.Position - V0.Position), (V2.Position - V0.Position));
-            V0.Normal = V1.Normal = V2.Normal = Normal;
-        }
-    }
-    
-    // Build UVs if missing
-    if (!HasTexCoords)
-    {
-        // TODO: Maybe triplanar texturing can make best results
-        for (int i = 0; i < (int)Mesh.size(); ++i)
-        {
-            base_vertex& V = Mesh[i];
-
-            float Length = Vec3::Length(V.Position);
-            if (Length != 0.f)
+            for (int i = 0; i < (int)Mesh.size(); i += 3)
             {
-                v3 Pos = V.Position / Length;
-                V.UV.x = 0.5f + Math::Atan2(Pos.z, Pos.x);
-                V.UV.y = Pos.y;
+                vertex_full& V0 = Mesh[i + 0];
+                vertex_full& V1 = Mesh[i + 1];
+                vertex_full& V2 = Mesh[i + 2];
+
+                v3 Normal = Vec3::Cross((V1.Position - V0.Position), (V2.Position - V0.Position));
+                V0.Normal = V1.Normal = V2.Normal = Normal;
             }
         }
+
+        // Build UVs if missing
+        if (!HasTexCoords)
+        {
+            // TODO: Maybe triplanar texturing can make best results
+            for (int i = 0; i < (int)Mesh.size(); ++i)
+            {
+                vertex_full& V = Mesh[i];
+
+                float Length = Vec3::Length(V.Position);
+                if (Length != 0.f)
+                {
+                    v3 Pos = V.Position / Length;
+                    V.UV.x = 0.5f + Math::Atan2(Pos.z, Pos.x);
+                    V.UV.y = Pos.y;
+                }
+            }
+        }
+
+        SaveObjToCache(Mesh, Filename);
     }
 
+    // Rescale positions
+    for (int i = 0; i < Mesh.size(); ++i)
+    {
+        v3& Position = Mesh[i].Position;
+        Position *= Scale;
+    }
+
+    return true;
+}
+
+void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descriptor, const char* Filename, float Scale)
+{
+    std::vector<vertex_full> Mesh;
+    if (!LoadObjNoConvertion(Mesh, Filename, Scale))
+        return Vertices;
+
+    // Check size
     int MeshSize = (int)Mesh.size();
     int SizeAvailable = GetVertexCount(Vertices, End, Descriptor);
     if (MeshSize > SizeAvailable)
@@ -349,5 +392,6 @@ void* Mesh::LoadObj(void* Vertices, void* End, const vertex_descriptor& Descript
         MeshSize = SizeAvailable;
     }
 
+    // Convert to output vertex format
     return ConvertVertices(Vertices, Descriptor, &Mesh[0], MeshSize);
 }

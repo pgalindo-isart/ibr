@@ -211,8 +211,12 @@ int main(int argc, char* argv[])
     ImGui_ImplOpenGL3_Init("#version 330");
     bool ShowDemoWindow = false;
 
+    double StartTime = glfwGetTime();
+
     // Demo scope
     {
+        GLCache::Init();
+
         // First update to pass to demo constructors
         GLFWPlatformIOUpdate(App.Window, &App.IO);
 
@@ -306,6 +310,11 @@ int main(int argc, char* argv[])
             glfwSwapBuffers(App.Window);
         }
     }
+
+    double Duration = glfwGetTime() - StartTime;
+    printf("Duration %.2fs\n", Duration);
+
+    GLCache::Destroy();
 
     // Terminate glfw
     glfwDestroyWindow(App.Window);

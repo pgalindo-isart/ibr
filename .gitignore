@@ -3,3 +3,4 @@
 /.vs
 /.vscode
 /imgui.ini
+/media/*.cache

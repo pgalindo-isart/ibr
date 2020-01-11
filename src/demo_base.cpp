@@ -3,17 +3,11 @@
 
 #include "imgui.h"
 #include "opengl_helpers.h"
+#include "color.h"
 #include "maths.h"
 #include "mesh.h"
 
 #include "demo_base.h"
-
-struct vertex
-{
-    v3 Position;
-    v2 UV;
-    v3 Normal;
-};
 
 static const char* gVertexShaderStr = R"GLSL(
 // Attributes
@@ -53,7 +47,7 @@ uniform sampler2D uColorTexture;
 uniform float uTime;
 uniform uLightBlock
 {
-	light uLight;
+	light uLight[LIGHT_COUNT];
 };
 
 // Shader outputs
@@ -63,98 +57,94 @@ void main()
 {
     oColor = texture(uColorTexture, vUV);
     
-    // Apply a phong light shading
-    oColor.rgb *= light_shade(uLight, vViewPos, normalize(vViewNormal));
+    // Compute phong light shading
+    vec3 lightsColor = vec3(0.0, 0.0, 0.0);
+	for (int i = 0; i < LIGHT_COUNT; ++i)
+        lightsColor += light_shade(uLight[i], vViewPos, normalize(vViewNormal));
+    
+    // Apply light color
+    oColor.rgb *= lightsColor;
 })GLSL";
 
 static bool EditLight(GL::light* Light)
 {
-    bool Result = 
-          ImGui::ColorEdit3("Ambient", Light->Ambient.e)
+    bool Result =
+          ImGui::Checkbox("Enabled", (bool*)&Light->Enabled)
+        + ImGui::ColorEdit3("Ambient", Light->Ambient.e)
         + ImGui::ColorEdit3("Diffuse", Light->Diffuse.e)
         + ImGui::ColorEdit3("Specular", Light->Specular.e)
         + ImGui::SliderFloat("Shininess", &Light->Shininess, 0.f, 1024.f)
-        + ImGui::SliderFloat("Attenuation (constant)",  &Light->Attenuation[0], 0.f, 10.f)
-        + ImGui::SliderFloat("Attenuation (linear)",    &Light->Attenuation[1], 0.f, 10.f)
-        + ImGui::SliderFloat("Attenuation (quadratic)", &Light->Attenuation[2], 0.f, 10.f);
+        + ImGui::SliderFloat("Attenuation (constant)",  &Light->Attenuation.e[0], 0.f, 10.f)
+        + ImGui::SliderFloat("Attenuation (linear)",    &Light->Attenuation.e[1], 0.f, 10.f)
+        + ImGui::SliderFloat("Attenuation (quadratic)", &Light->Attenuation.e[2], 0.f, 10.f);
     return Result;
 }
 
 demo_base::demo_base()
 {
     // Init camera pos
-    this->Camera.Position.z = 2.f;
+    this->Camera.Position = { 0.f, 0.f, 0.f };
 
-    // Init light
-    this->Light =
+    // Init lights
     {
-        { 0.0f, 0.0f, 0.0f, 1.0f }, // position
-        { 0.2f, 0.2f, 0.2f }, -1.f, // ambient
-        { 1.0f, 1.0f, 1.0f }, -1.f, // diffuse
-        { 1.0f, 1.0f, 1.0f },       // specular
-        32.f,                       // shininess
-        { 1.0f, 0.0f, 0.0f },       // attenuation(constant, linear, quadratic)
+        GL::light DefaultLight = // (Default light, standard values)
+        {
+            true, { -1.f, -1.f, -1.f }, // enabled (+padding)
+            { 0.0f, 0.0f, 0.0f, 1.0f }, // position
+            { 0.2f, 0.2f, 0.2f }, -1.f, // ambient (+padding)
+            { 1.0f, 1.0f, 1.0f }, -1.f, // diffuse (+padding)
+            { 1.0f, 1.0f, 1.0f },       // specular
+            32.f,                       // shininess
+            { 1.0f, 0.0f, 0.0f },       // attenuation(constant, linear, quadratic)
+        };
+
+        // Sun light
+        this->Lights[0] = DefaultLight;
+        LightsWorldPosition[0] = { 1.f, 3.f, 1.f, 0.f }; // Directional light
+        this->Lights[0].Diffuse = Color::RGB(0x374D58);
+
+        // Candles
+        GL::light CandleLight = DefaultLight;
+        CandleLight.Diffuse = Color::RGB(0xFFB400);
+        CandleLight.Specular = CandleLight.Diffuse;
+        CandleLight.Attenuation = { 0.f, 0.f, 2.0f };
+
+        this->Lights[1] = this->Lights[2] = this->Lights[3] = this->Lights[4] = this->Lights[5] = CandleLight;
+        // Candle positions (taken from mesh data)
+        LightsWorldPosition[1] = { -3.21437f, -0.162299f, 5.54766f,  1.f }; // Candle 1
+        LightsWorldPosition[2] = { -4.72162f, -0.162299f, 2.59089f,  1.f }; // Candle 2
+        LightsWorldPosition[3] = { -2.66101f, -0.162299f, 0.235029f, 1.f }; // Candle 3
+        LightsWorldPosition[4] = {  0.012123f, 0.352532f,-2.3027f,   1.f }; // Candle 4
+        LightsWorldPosition[5] = {  3.03036f,  0.352532f,-1.64417f,  1.f }; // Candle 5
+    }
+
+    // Assemble fragment shader strings (defines + code)
+    char FragmentShaderConfig[] = "#define LIGHT_COUNT %d  \n";
+    snprintf(FragmentShaderConfig, ARRAY_SIZE(FragmentShaderConfig), FragmentShaderConfig, LIGHT_COUNT);
+    const char* FragmentShaderStrs[2] = {
+        FragmentShaderConfig,
+        gFragmentShaderStr,
     };
 
-    // Create render pipeline
-    this->Program = GL::CreateProgram(gVertexShaderStr, gFragmentShaderStr, true);
+    // Create main shader
+    this->Program = GL::CreateProgramEx(1, &gVertexShaderStr, 2, FragmentShaderStrs, true);
     
-    // Gen mesh
+    // Create mesh
     {
-        std::vector<vertex> VerticeBuffer(20480);
-
-        vertex* VerticesStart = &VerticeBuffer[0];
-        vertex* VerticesEnd = VerticesStart + VerticeBuffer.size();
-
-        // Create a descriptor based on the `struct vertex` format
-        vertex_descriptor Descriptor = {};
-        Descriptor.Stride = sizeof(vertex);
-        Descriptor.HasUV = true;
-        Descriptor.HasNormal = true;
-        Descriptor.PositionOffset = OFFSETOF(vertex, Position);
-        Descriptor.UVOffset = OFFSETOF(vertex, UV);
-        Descriptor.NormalOffset = OFFSETOF(vertex, Normal);
-
-        vertex* Cur = VerticesStart;
-
-        // Add a scaled down cube
-        Cur = (vertex*)Mesh::Transform(
-            Cur, Mesh::BuildCube(Cur, VerticesEnd, Descriptor),
-            Descriptor, Mat4::Scale({0.5f, 0.5f, 0.5f}));
-
-        // Add a obj
-        Cur = (vertex*)Mesh::Transform(
-            Cur, Mesh::LoadObj(Cur, VerticesEnd, Descriptor, "media/teapot.obj", 0.2f),
-            Descriptor, Mat4::Translate({ 0.f, 0.25f, 0.f }));
-
-        // Add a sphere
-        Cur = (vertex*)Mesh::Transform(
-            Cur, Mesh::BuildSphere(Cur, VerticesEnd, Descriptor, 8, 8),
-            Descriptor, Mat4::Translate({ 1.f, 0.f, 0.f}) * Mat4::Scale({ 0.5f, 0.5f, 0.5f }));
-
-        // Calculate vertex count (we need it to call glDrawArrays)
-        this->VertexCount = (int)(Cur - VerticesStart);
-
-        // Upload mesh to gpu
-        glGenBuffers(1, &MeshBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER, MeshBuffer);
-        glBufferData(GL_ARRAY_BUFFER, this->VertexCount * sizeof(vertex), VerticesStart, GL_STATIC_DRAW);
+        // Use vbo from GLCache
+        MeshBuffer = GLCache::LoadObj("media/fantasy_game_inn.obj", 1.f, &this->VertexCount);
     }
 
     // Gen light uniform block
     {
-        glGenBuffers(1, &LightUniformBuffer);
-        glBindBuffer(GL_UNIFORM_BUFFER, LightUniformBuffer);
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(GL::light), &Light, GL_DYNAMIC_DRAW);
+        glGenBuffers(1, &LightsUniformBuffer);
+        glBindBuffer(GL_UNIFORM_BUFFER, LightsUniformBuffer);
+        glBufferData(GL_UNIFORM_BUFFER, LIGHT_COUNT * sizeof(GL::light), &Lights[0], GL_DYNAMIC_DRAW);
     }
 
     // Gen texture
     {
-        glGenTextures(1, &Texture);
-        glBindTexture(GL_TEXTURE_2D, Texture);
-        GL::UploadCheckerboardTexture(64, 64, 8);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        Texture = GLCache::LoadTexture("media/fantasy_game_inn_diffuse.png", IMG_FLIP | IMG_GEN_MIPMAPS);
     }
     
     // Create a vertex array and bind it with the vertex buffer
@@ -165,9 +155,9 @@ demo_base::demo_base()
         glEnableVertexAttribArray(0);
         glEnableVertexAttribArray(1);
         glEnableVertexAttribArray(2);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, Position));
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, UV));
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, Normal));
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_full), (void*)OFFSETOF(vertex_full, Position));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_full), (void*)OFFSETOF(vertex_full, UV));
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_full), (void*)OFFSETOF(vertex_full, Normal));
         glBindVertexArray(0);
     }
 }
@@ -205,16 +195,14 @@ void demo_base::Update(const platform_io& IO)
     glUniformMatrix4fv(glGetUniformLocation(Program, "uModel"), 1, GL_FALSE, ModelTransform.e);
 
     // Update light position inside the uniform buffer
-    if (LightAutoMove)
+    for (int i = 0; i < LIGHT_COUNT; ++i)
     {
-        LightWorldPosition.x = Math::Sin((float)(IO.Time * 0.5)) * 3.f;
-        LightWorldPosition.y = 2.f;
-        LightWorldPosition.z = Math::Cos((float)(IO.Time * 0.75)) * 3.f;
+        GL::light& Light = Lights[i];
+        Light.Position = ViewTransform * LightsWorldPosition[i];
+        glBindBuffer(GL_UNIFORM_BUFFER, LightsUniformBuffer);
+        glBufferSubData(GL_UNIFORM_BUFFER, i * sizeof(GL::light) + OFFSETOF(GL::light, Position), sizeof(v4), &Light.Position);
     }
-    Light.Position = ViewTransform * LightWorldPosition;
-    glBindBuffer(GL_UNIFORM_BUFFER, LightUniformBuffer);
-    glBufferSubData(GL_UNIFORM_BUFFER, OFFSETOF(GL::light, Position), sizeof(v4), &Light.Position);
-    glBindBufferBase(GL_UNIFORM_BUFFER, glGetUniformBlockIndex(Program, "uLightBlock"), LightUniformBuffer);
+    glBindBufferBase(GL_UNIFORM_BUFFER, glGetUniformBlockIndex(Program, "uLightBlock"), LightsUniformBuffer);
     
     // Draw mesh
     glBindTexture(GL_TEXTURE_2D, Texture);
@@ -237,24 +225,33 @@ void demo_base::Update(const platform_io& IO)
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNodeEx("Light", ImGuiTreeNodeFlags_Framed))
+    if (ImGui::TreeNodeEx("Lights", ImGuiTreeNodeFlags_Framed))
     {
-        ImGui::Checkbox("Anim", &LightAutoMove);
-        if (ImGui::SliderFloat4("Position", LightWorldPosition.e, -3.f, 3.f) + EditLight(&Light))
+        for (int i = 0; i < LIGHT_COUNT; ++i)
         {
-            glBindBuffer(GL_UNIFORM_BUFFER, LightUniformBuffer);
-            glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(GL::light), &Light);
-        }
+            if (ImGui::TreeNode(&Lights[i], "Light[%d]", i))
+            {
+                v4& LightWorldPosition = LightsWorldPosition[i];
+                GL::light& Light = Lights[i];
+                if (ImGui::SliderFloat4("Position", LightWorldPosition.e, -3.f, 3.f) + EditLight(&Light))
+                {
+                    glBindBuffer(GL_UNIFORM_BUFFER, LightsUniformBuffer);
+                    glBufferSubData(GL_UNIFORM_BUFFER, i * sizeof(GL::light), sizeof(GL::light), &Light);
+                }
 
-        // Calculate attenuation based on the light values
-        {
-            ImGui::Text("Attenuation calculator:");
-            static float Dist = 5.f;
-            float Att = 1.f / (Light.Attenuation[0] + Light.Attenuation[1] * Dist + Light.Attenuation[2] * Light.Attenuation[2] * Dist);
-            ImGui::Text("att(d) = 1.0 / (c + ld + qdd)");
-            ImGui::SliderFloat("d", &Dist, 0.f, 20.f);
-            ImGui::Text("att(%.2f) = %.2f", Dist, Att);
-            ImGui::TreePop();
+                // Calculate attenuation based on the light values
+                if (ImGui::TreeNode("Attenuation calculator"))
+                {
+                    static float Dist = 5.f;
+                    float Att = 1.f / (Light.Attenuation.e[0] + Light.Attenuation.e[1] * Dist + Light.Attenuation.e[2] * Light.Attenuation.e[2] * Dist);
+                    ImGui::Text("att(d) = 1.0 / (c + ld + qdd)");
+                    ImGui::SliderFloat("d", &Dist, 0.f, 20.f);
+                    ImGui::Text("att(%.2f) = %.2f", Dist, Att);
+                    ImGui::TreePop();
+                }
+                ImGui::TreePop();
+            }
         }
+        ImGui::TreePop();
     }
 }

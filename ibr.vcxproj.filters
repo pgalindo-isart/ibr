@@ -155,5 +155,8 @@
     <ClInclude Include="src\demo_minimal.h">
       <Filter>Header Files\demo</Filter>
     </ClInclude>
+    <ClInclude Include="src\color.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

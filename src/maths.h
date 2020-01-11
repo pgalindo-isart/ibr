@@ -46,12 +46,15 @@ inline v3 operator-(v3 A, v3 B) { return { A.x - B.x, A.y - B.y, A.z - B.z }; }
 
 inline v3 operator*(v3 V, float S) { return { V.x * S, V.y * S, V.z * S }; }
 inline v3 operator*(float S, v3 V) { return V * S; }
+inline v3& operator*=(v3& V, float A) { V = V * A; return V; }
 
 inline v3 operator/(v3 V, float A)
 {
     float Inverse = 1.f / A;
     return V * Inverse;
 }
+
+inline v3& operator/=(v3& V, float A) { V = V / A; return V; }
 
 namespace Vec3
 {
@@ -84,6 +87,18 @@ namespace Vec3
 // ========================================================================
 // VEC4 FUNCTIONS
 // ========================================================================
+
+inline v4 operator*(v4 V, float S) { return { V.x * S, V.y * S, V.z * S }; }
+inline v4 operator*(float S, v4 V) { return V * S; }
+
+inline v4 operator/(v4 V, float A)
+{
+    float Inverse = 1.f / A;
+    return V * Inverse;
+}
+
+inline v4& operator/=(v4& V, float A) { V = V / A; return V; }
+
 namespace Vec4
 {
     inline v4 vec4(v3 xyz, float w)
