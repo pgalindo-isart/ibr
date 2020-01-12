@@ -55,6 +55,7 @@ void main()
     oColor = texture(uColorTexture, vUV);
     
     // Compute phong shading
+    vec3 phongColor = gDefaultMaterial.emission;
 	for (int i = 0; i < LIGHT_COUNT; ++i)
         phongColor += light_shade(uLight[i], gDefaultMaterial, vViewPos, normalize(vViewNormal));
     
