@@ -21,4 +21,4 @@ Il existe plusieurs façon d'arriver au même résultat. Nous voyons ici une des
 - Réactiver l'écriture dans le depth buffer.
 - Rendre la scène.
 
-Le désavantage de cette technique est que l'on rend la skybox avant la scène. Cela entraine de l'overdraw (les pixels sont écrits plusieurs fois), ce qui entraine un fillrate plus élevé.
+Le désavantage de cette technique est que l'on rend la skybox avant la scène. Cela provoque de l'overdraw (les pixels sont écrits plusieurs fois), ce qui entraine un fillrate plus élevé.
