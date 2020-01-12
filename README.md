@@ -24,11 +24,11 @@
 
 ## Le but
 
-Ce module vous donne l'occasion de manipuler des fonctionalités essentielles du [pipeline 3D](https://en.wikipedia.org/wiki/Graphics_pipeline). L'implémentation de chacun de ces effets vous donnera un vocabulaire qui vous sera ensuite utile pour le projet de fin d'année de moteur de jeu.
+Ce module vous donne l'occasion de manipuler des fonctionalités essentielles du [pipeline 3D](https://en.wikipedia.org/wiki/Graphics_pipeline). L'implémentation de chacun de ces effets vous donnera de la matière qui vous sera ensuite utile pour le projet de fin d'année de moteur de jeu.
 
 ## Notation
 
-Ayant une durée d'environ une semaine, il est possible que vous n'ayez pas le temps de tous les faire. Vous devez cependant fournir une liste d'effets **____**qui justifie cette semaine de travail**____**.
+Avec une durée d'environ 7 jours, il est possible que vous n'ayez pas le temps de tous les faire. Vous devez cependant fournir une liste d'effets **____**qui justifie cette semaine de travail**____**.
 
 ## Estimation des durées d'implémentation des effets
 (Sujettes à variation selon les implémentations et le degré d'approfondissement)
@@ -45,7 +45,6 @@ Sont pris en compte dans la notation :
 - Pas de memory (ram/vram) leaks.
 - Les démos doivent avoir un rendu visuel peaufiné. (Évitez les cubes qui flottent dans les abysses).
 - Le nom des variables doit être clair (dans leur contexte).
-- 
 
 # Notes et directives
 
