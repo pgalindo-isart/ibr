@@ -149,13 +149,13 @@ static demo_postprocess::postprocess_pass_data CreatePostProcessPass()
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(quad_vertex), (void*)OFFSETOF(quad_vertex, Position));
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(quad_vertex), (void*)OFFSETOF(quad_vertex, UV));
-    glBindVertexArray(0);
 
 	return Data;
 }
 
 static void DeletePostProcessPass(const demo_postprocess::postprocess_pass_data& Data)
 {
+    glDeleteProgram(Data.Program);
 	glDeleteBuffers(1, &Data.VertexBuffer);
 	glDeleteVertexArrays(1, &Data.VAO);
 }
@@ -175,7 +175,8 @@ static void DrawPostProcessPass(const demo_postprocess::postprocess_pass_data& D
 // ================================================================================================
 // DEMO POSTPROCESS
 // ================================================================================================
-demo_postprocess::demo_postprocess(const platform_io& IO)
+demo_postprocess::demo_postprocess(const platform_io& IO, GL::cache& GLCache, GL::debug& GLDebug)
+    : DemoBase(GLCache, GLDebug)
 {
     Framebuffer = CreateFramebuffer(IO.ScreenWidth, IO.ScreenHeight);
     PostProcessPassData = CreatePostProcessPass();
@@ -256,7 +257,10 @@ static mat4 DebugUI_GetColorTransformMatrix()
 
 void demo_postprocess::Update(const platform_io& IO)
 {
+    const float AspectRatio = (float)IO.ScreenWidth / (float)IO.ScreenHeight;
     Camera = CameraUpdateFreefly(Camera, IO.CameraInputs);
+    mat4 ProjectionTransform = Mat4::Perspective(Math::ToRadians(60.f), AspectRatio, 0.1f, 100.f);
+    mat4 ViewTransform = CameraGetInverseMatrix(Camera);
 
 	// Clear screen
 	// Keep track previous framebuffer (should be 0)
@@ -267,7 +271,9 @@ void demo_postprocess::Update(const platform_io& IO)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer.FBO);
 
-        DemoBase.Update(IO);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        DemoBase.Render(ProjectionTransform, ViewTransform, Mat4::Identity());
     }
 
 	// Second pass render FBO.ColorTexture to screen with postprocess shader
@@ -282,14 +288,19 @@ void demo_postprocess::Update(const platform_io& IO)
     }
 
     // Debug
-    if (ImGui::TreeNodeEx("PostProcessPassData.Program", ImGuiTreeNodeFlags_Framed))
+    DemoBase.DisplayDebugUI();
+    if (ImGui::TreeNodeEx("demo_postprocess", ImGuiTreeNodeFlags_Framed))
     {
-        GLImGui::InspectProgram(PostProcessPassData.Program);
+        if (ImGui::TreeNodeEx("PostProcessPassData.Program"))
+        {
+            GLImGui::InspectProgram(PostProcessPassData.Program);
+            ImGui::TreePop();
+        }
+
+        ImGui::Text("First pass image:");
+        ImGui::Image((ImTextureID)(size_t)Framebuffer.ColorTexture, { IO.ScreenWidth / 3.f, IO.ScreenHeight / 3.f }, { 0.f, 1.f }, { 1.f, 0.f });
+
+        PostProcessPassData.ColorTransform = DebugUI_GetColorTransformMatrix();
         ImGui::TreePop();
     }
-
-    ImGui::Text("First pass image:");
-    ImGui::Image((ImTextureID)(size_t)Framebuffer.ColorTexture, { IO.ScreenWidth / 3.f, IO.ScreenHeight / 3.f }, { 0.f, 1.f }, { 1.f, 0.f });
-
-    PostProcessPassData.ColorTransform = DebugUI_GetColorTransformMatrix();
 }

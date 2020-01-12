@@ -92,7 +92,6 @@ demo_minimal::demo_minimal()
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, Position));
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)OFFSETOF(vertex, UV));
-    glBindVertexArray(0);
 }
 
 demo_minimal::~demo_minimal()
@@ -130,7 +129,6 @@ void demo_minimal::Update(const platform_io& IO)
     glBindTexture(GL_TEXTURE_2D, Texture);
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, VertexCount);
-    glBindVertexArray(0);
 
     // Debug shader
     if (ImGui::CollapsingHeader("Shader"))

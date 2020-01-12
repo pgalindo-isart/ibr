@@ -210,23 +210,25 @@ int main(int argc, char* argv[])
     ImGui_ImplGlfw_InitForOpenGL(App.Window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
     bool ShowDemoWindow = false;
+    bool HideImGui = false;
 
     double StartTime = glfwGetTime();
 
     // Demo scope
     {
-        GLCache::Init();
+        GL::cache GLCache;
+        GL::debug GLDebug;
 
         // First update to pass to demo constructors
         GLFWPlatformIOUpdate(App.Window, &App.IO);
 
-        int DemoId = 0; // Change this to start with another demo
+        int DemoId = 2; // Change this to start with another demof
         std::unique_ptr<demo> Demos[] = 
         {
-            std::make_unique<demo_base>(),
+            std::make_unique<demo_base>(GLCache, GLDebug),
             std::make_unique<demo_minimal>(),
-            std::make_unique<demo_pg_skybox>(),
-            std::make_unique<demo_postprocess>(App.IO),
+            std::make_unique<demo_pg_skybox>(GLCache, GLDebug),
+            std::make_unique<demo_postprocess>(App.IO, GLCache, GLDebug),
             // TODO(demo): Add other demos here
         };
 
@@ -243,7 +245,7 @@ int main(int argc, char* argv[])
             
             App.IO.CameraInputs = GLFWGetCameraInputs(App.IO, App.Keyboard);
 
-            // Escape key
+            // Escape key (capture mouse to move camera)
             if (KeyPressed(GLFW_KEY_ESCAPE, PrevKeyboard, App.Keyboard))
             {
                 if (App.IO.MouseCaptured)
@@ -257,8 +259,12 @@ int main(int argc, char* argv[])
                 }
             }
 
+            // Tab key (hide ImGui)
+            if (KeyPressed(GLFW_KEY_TAB, PrevKeyboard, App.Keyboard))
+                HideImGui = !HideImGui;
+
             // Debug keys
-            for (int i = 0; i < 12; ++i)
+            for (int i = 0; i < ARRAY_SIZE(App.IO.DebugKeysDown); ++i)
             {
                 int Key = GLFW_KEY_F1 + i;
                 App.IO.DebugKeysDown[i]    = App.Keyboard.Keys[Key];
@@ -304,7 +310,8 @@ int main(int argc, char* argv[])
             Demos[DemoId]->Update(App.IO);
 
             ImGui::Render();
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            if (HideImGui == false)
+                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
             // Present framebuffer
             glfwSwapBuffers(App.Window);
@@ -314,7 +321,10 @@ int main(int argc, char* argv[])
     double Duration = glfwGetTime() - StartTime;
     printf("Duration %.2fs\n", Duration);
 
-    GLCache::Destroy();
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     // Terminate glfw
     glfwDestroyWindow(App.Window);

@@ -25,7 +25,7 @@ struct platform_io
 
     camera_inputs CameraInputs;
 
-    // F1 to F12 keys
-    bool DebugKeysDown[12];
-    bool DebugKeysPressed[12];
+    // F1 to F11 keys
+    bool DebugKeysDown[11];
+    bool DebugKeysPressed[11];
 };

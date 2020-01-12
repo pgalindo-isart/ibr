@@ -1,10 +1,9 @@
 
-#include <cstdio>
+#include <cassert>
 #include <vector>
 #include <string>
 #include <map>
 
-#include "imgui.h"
 #include "stb_image.h"
 #include "platform.h"
 #include "mesh.h"
@@ -15,19 +14,26 @@ using namespace GL;
 
 // Light shader function
 static const char* PhongLightingStr = R"GLSL(
-#line 16
 // =================================
 // PHONG SHADER START ===============
 // Light structure
 struct light
 {
 	bool enabled;
-    vec4 position;
+    vec4 viewPosition;
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
-    float shininess;
     float attenuation[3];
+};
+
+struct material
+{
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+	vec3 emission;
+	float shininess;
 };
 
 // Default light
@@ -37,48 +43,102 @@ light gDefaultLight = light(
     vec3(0.2, 0.2, 0.2),
     vec3(0.8, 0.8, 0.8),
     vec3(0.9, 0.9, 0.9),
-    64.0,
     float[3](1.0, 0.0, 0.0));
 
+// Default material
+uniform material gDefaultMaterial = material(
+    vec3(0.2, 0.2, 0.2),
+    vec3(0.8, 0.8, 0.8),
+    vec3(0.0, 0.0, 0.0),
+    vec3(0.0, 0.0, 0.0),
+    0.0);
+
 // Phong shading function
-vec3 light_shade(light light, vec3 position, vec3 normal)
+// viewPosition : fragment position in view-space
+//   viewNormal : fragment normal in view-space
+vec3 light_shade(light light, material material, vec3 viewPosition, vec3 viewNormal)
 {
 	if (!light.enabled)
-		return vec3(0.0, 0.0, 0.0);
+		return vec3(0.0);
 
     vec3 lightDir;
-    float attenuation = 1.0;
-    if (light.position.w > 0.0)
+    float lightAttenuation = 1.0;
+    if (light.viewPosition.w > 0.0)
     {
         // Point light
-        vec3 lightPosFromVertexPos = (light.position.xyz / light.position.w) - position;
+        vec3 lightPosFromVertexPos = (light.viewPosition.xyz / light.viewPosition.w) - viewPosition;
         lightDir = normalize(lightPosFromVertexPos);
         float dist = length(lightPosFromVertexPos);
-        attenuation = 1.0 / (light.attenuation[0] + light.attenuation[1]*dist + light.attenuation[2]*light.attenuation[2]*dist);
+        lightAttenuation = 1.0 / (light.attenuation[0] + light.attenuation[1]*dist + light.attenuation[2]*light.attenuation[2]*dist);
     }
     else
     {
         // Directional light
-        lightDir = normalize(light.position.xyz);
+        lightDir = normalize(light.viewPosition.xyz);
     }
 
-    if (attenuation < 0.001)
-        return vec3(0.0, 0.0, 0.0);
+    if (lightAttenuation < 0.001)
+        return vec3(0.0);
 
-    vec3 viewDir  = normalize(-position);
-    vec3 halfDir  = normalize(lightDir + viewDir);
-    float specAngle = max(dot(halfDir, normal), 0.f);
+    vec3 viewDir  = normalize(-viewPosition);
+	vec3 reflectDir = reflect(-lightDir, viewNormal);
+	float specAngle = max(dot(reflectDir, viewDir), 0.0);
 
-    vec3 ambient  = light.ambient;
-    vec3 diffuse  = light.diffuse  * max(dot(normal, lightDir), 0.f);
-    vec3 specular = light.specular * pow(specAngle, light.shininess);
+    vec3 ambient  = lightAttenuation * material.ambient  * light.ambient;
+    vec3 diffuse  = lightAttenuation * material.diffuse  * light.diffuse  * max(dot(viewNormal, lightDir), 0.0);
+    vec3 specular = lightAttenuation * material.specular * light.specular * (pow(specAngle, material.shininess / 4.0));
+	specular = clamp(specular, 0.0, 1.0);
     
-    //return clamp(ambient + diffuse + specular, { 0.f, 0.f, 0.f }, { 1.f, 1.f, 1.f});
-    return attenuation * (ambient + diffuse + specular);
+	return ambient + diffuse + specular;
 }
 // PHONG SHADER STOP ===============
 // =================================
 )GLSL";
+
+void GL::UniformLight(GLuint Program, const char* LightUniformName, const light& Light)
+{
+	glUseProgram(Program);
+	char UniformMemberName[255];
+
+	sprintf(UniformMemberName, "%s.enabled", LightUniformName);
+	glUniform1i(glGetUniformLocation(Program, UniformMemberName), Light.Enabled);
+
+	sprintf(UniformMemberName, "%s.viewPosition", LightUniformName);
+	glUniform4fv(glGetUniformLocation(Program, UniformMemberName), 1, Light.ViewPosition.e);
+
+	sprintf(UniformMemberName, "%s.ambient", LightUniformName);
+	glUniform3fv(glGetUniformLocation(Program, UniformMemberName), 1, Light.Ambient.e);
+
+	sprintf(UniformMemberName, "%s.diffuse", LightUniformName);
+	glUniform3fv(glGetUniformLocation(Program, UniformMemberName), 1, Light.Diffuse.e);
+
+	sprintf(UniformMemberName, "%s.specular", LightUniformName);
+	glUniform3fv(glGetUniformLocation(Program, UniformMemberName), 1, Light.Specular.e);
+
+	sprintf(UniformMemberName, "%s.attenuation", LightUniformName);
+	glUniform1fv(glGetUniformLocation(Program, UniformMemberName), 3, Light.Attenuation.e);
+}
+
+void UniformMaterial(GLuint Program, const char* MaterialUniformName, const material& Material)
+{
+	glUseProgram(Program);
+	char UniformMemberName[255];
+
+	sprintf(UniformMemberName, "%s.ambient", MaterialUniformName);
+	glUniform3fv(glGetUniformLocation(Program, UniformMemberName), 1, Material.Ambient.e);
+
+	sprintf(UniformMemberName, "%s.diffuse", MaterialUniformName);
+	glUniform3fv(glGetUniformLocation(Program, UniformMemberName), 1, Material.Diffuse.e);
+
+	sprintf(UniformMemberName, "%s.specular", MaterialUniformName);
+	glUniform3fv(glGetUniformLocation(Program, UniformMemberName), 1, Material.Specular.e);
+
+	sprintf(UniformMemberName, "%s.emission", MaterialUniformName);
+	glUniform3fv(glGetUniformLocation(Program, UniformMemberName), 1, Material.Emission.e);
+
+	sprintf(UniformMemberName, "%s.shininess", MaterialUniformName);
+	glUniform1f(glGetUniformLocation(Program, UniformMemberName), Material.Shininess);
+}
 
 GLuint GL::CompileShaderEx(GLenum ShaderType, int ShaderStrsCount, const char** ShaderStrs, bool InjectLightShading)
 {
@@ -144,14 +204,21 @@ void GL::UploadTexture(const char* Filename, int ImageFlags, int* WidthOut, int*
 
     // Desired channels
     int DesiredChannels = 0;
-    if (ImageFlags & IMG_FORCE_RGB)
-        DesiredChannels = STBI_rgb;
-    if (ImageFlags & IMG_FORCE_RGBA)
-        DesiredChannels = STBI_rgb_alpha;
+	int Channels = 0;
+	if (ImageFlags & IMG_FORCE_RGB)
+	{
+		DesiredChannels = STBI_rgb;
+		Channels = 3;
+	}
+	if (ImageFlags & IMG_FORCE_RGBA)
+	{
+		DesiredChannels = STBI_rgb_alpha;
+		Channels = 4;
+	}
 
     // Loading
-    int Width, Height, Channels;
-    uint8_t* Image = stbi_load(Filename, &Width, &Height, &Channels, DesiredChannels);
+    int Width, Height;
+    uint8_t* Image = stbi_load(Filename, &Width, &Height, (DesiredChannels == 0) ? &Channels : nullptr, DesiredChannels);
     if (Image == nullptr)
     {
         fprintf(stderr, "Image loading failed on '%s'\n", Filename);
@@ -195,7 +262,7 @@ void GL::UploadCheckerboardTexture(int Width, int Height, int SquareSize)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Width, Width, 0, GL_RGBA, GL_FLOAT, &Texels[0]);
 }
 
-struct gl_cache_data
+struct GL::cache::data
 {
 	struct mesh
 	{
@@ -207,11 +274,6 @@ struct gl_cache_data
 	{
 		std::string Filename;
 		int ImageFlags;
-
-		bool operator==(const texture_identifier& Other) const
-		{
-			return Filename == Other.Filename && ImageFlags == Other.ImageFlags;
-		}
 
 		bool operator<(const texture_identifier& Other) const
 		{
@@ -231,53 +293,59 @@ struct gl_cache_data
 	std::map<texture_identifier, texture> TextureMap;
 };
 
-void GLCache::Init()
+GL::cache::cache()
 {
-	CacheData = new gl_cache_data();
+	Data = new cache::data();
 }
 
-void GLCache::Destroy()
+GL::cache::~cache()
 {
-	delete CacheData;
+	for (const auto& KeyValue : Data->TextureMap)
+		glDeleteTextures(1, &KeyValue.second.TextureID);
+
+	for (const auto& KeyValue : Data->VertexBufferMap)
+		glDeleteBuffers(1, &KeyValue.second.VertexBuffer);
+
+	delete Data;
 }
 
-GLuint GLCache::LoadObj(const char* Filename, float Scale, int* VertexCountOut)
+GLuint GL::cache::LoadObj(const char* Filename, float Scale, int* VertexCountOut)
 {
-	assert(CacheData != nullptr);
+	assert(Data != nullptr);
 
-	auto Found = CacheData->VertexBufferMap.find(Filename);
-	if (Found != CacheData->VertexBufferMap.end())
+	auto Found = Data->VertexBufferMap.find(Filename);
+	if (Found != Data->VertexBufferMap.end())
 	{
 		if (VertexCountOut)
 			*VertexCountOut = Found->second.Size;
 		return Found->second.VertexBuffer;
 	}
 
-	CacheData->TmpBuffer.clear();
-	Mesh::LoadObjNoConvertion(CacheData->TmpBuffer, Filename, Scale);
+	Data->TmpBuffer.clear();
+	Mesh::LoadObjNoConvertion(Data->TmpBuffer, Filename, Scale);
 
 	// Upload mesh to gpu
 	GLuint MeshBuffer = 0;
 	glGenBuffers(1, &MeshBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, MeshBuffer);
-	glBufferData(GL_ARRAY_BUFFER, CacheData->TmpBuffer.size() * sizeof(vertex_full), &CacheData->TmpBuffer[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, Data->TmpBuffer.size() * sizeof(vertex_full), &Data->TmpBuffer[0], GL_STATIC_DRAW);
 
 	if (VertexCountOut)
-		*VertexCountOut = (int)CacheData->TmpBuffer.size();
+		*VertexCountOut = (int)Data->TmpBuffer.size();
 	
-	CacheData->VertexBufferMap[Filename] = { MeshBuffer, (int)CacheData->TmpBuffer.size() };
+	Data->VertexBufferMap[Filename] = { MeshBuffer, (int)Data->TmpBuffer.size() };
 
 	return MeshBuffer;
 }
 
-GLuint GLCache::LoadTexture(const char* Filename, int ImageFlags, int* WidthOut, int* HeightOut)
+GLuint GL::cache::LoadTexture(const char* Filename, int ImageFlags, int* WidthOut, int* HeightOut)
 {
-	assert(CacheData != nullptr);
+	assert(Data != nullptr);
 
-	gl_cache_data::texture_identifier TextureIdentifier = { Filename, ImageFlags };
+	GL::cache::data::texture_identifier TextureIdentifier = { Filename, ImageFlags };
 	
-	auto Found = CacheData->TextureMap.find(TextureIdentifier);
-	if (Found != CacheData->TextureMap.end())
+	auto Found = Data->TextureMap.find(TextureIdentifier);
+	if (Found != Data->TextureMap.end())
 	{
 		if (WidthOut)  *WidthOut  = Found->second.Width;
 		if (HeightOut) *HeightOut = Found->second.Height;
@@ -293,412 +361,109 @@ GLuint GLCache::LoadTexture(const char* Filename, int ImageFlags, int* WidthOut,
 	if (WidthOut)  *WidthOut  = Width;
 	if (HeightOut) *HeightOut = Height;
 
-	CacheData->TextureMap[TextureIdentifier] = { Texture, Width, Height };
+	Data->TextureMap[TextureIdentifier] = { Texture, Width, Height };
 
 	return Texture;
 }
 
-static void DebugGLBoolText(const char* Name, GLint value, bool color = true)
+struct GL::debug::data
 {
-	ImGui::Text("%s:", Name);
-	ImGui::SameLine();
-	if (color) ImGui::PushStyleColor(ImGuiCol_Text, value ? ImVec4(0.0f, 1.f, 0.f, 1.f) : ImVec4(1.0f, 0.f, 0.f, 1.f));
-	ImGui::Text("%s", value ? "GL_TRUE" : "GL_FALSE");
-	if (color) ImGui::PopStyleColor();
+	GLuint WireframeProgram;
+	GLuint WireframeVAO;
+	std::vector<v3> BaryBufferData;
+	GLuint BaryBuffer;
+};
+
+static const char* gWireframeVertexShaderStr = R"GLSL(
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aBC;
+uniform mat4 uModelViewProj;
+out vec3 vBC;
+
+void main()
+{
+    vBC = aBC;
+    gl_Position = uModelViewProj * vec4(aPosition, 1.0);
+})GLSL";
+
+static const char* gWireframeFragmentShaderStr = R"GLSL(
+in vec3 vBC;
+out vec4 oColor;
+uniform float uLineWidth = 1.25;
+uniform vec4 uLineColor = vec4(1.0, 1.0, 1.0, 0.25);
+
+float edgeFactor()
+{
+    vec3 d = fwidth(vBC);
+    vec3 a3 = smoothstep(vec3(0.0), d * uLineWidth, vBC);
+    return min(min(a3.x, a3.y), a3.z);
 }
 
-static void DebugShader(GLuint program, GLuint shader)
+void main()
 {
-	static GLuint shaderEdited = 0;
-	static GLuint prevShaderEdited = -1;
-	static int shaderSourceBufferSize = 10 * 1024;
-	static char* shaderSourceBuffer = (char*)malloc(shaderSourceBufferSize); // Memory leak here
+    oColor = vec4(uLineColor.rgb, uLineColor.a * (1.0 - edgeFactor()));
+})GLSL";
 
-	GLint shaderType;
-	glGetShaderiv(shader, GL_SHADER_TYPE, &shaderType);
-
-	const char* shaderTypeStr = "";
-	switch (shaderType)
-	{
-	case GL_VERTEX_SHADER:   shaderTypeStr = "GL_VERTEX_SHADER"; break;
-	case GL_FRAGMENT_SHADER: shaderTypeStr = "GL_FRAGMENT_SHADER"; break;
-	case GL_GEOMETRY_SHADER: shaderTypeStr = "GL_GEOMETRY_SHADER"; break;
-	default: shaderTypeStr = "UNKNOWN_SHADER_TYPE";
-	}
-
-	if (ImGui::TreeNode((void*)(intptr_t)shader, "%s (id = %d)", shaderTypeStr, shader))
-	{
-		if (ImGui::Button("Edit"))
-			shaderEdited = shader;
-
-		if (ImGui::TreeNode("Status"))
-		{
-			GLint deleteStatus;
-			glGetShaderiv(shader, GL_DELETE_STATUS, &deleteStatus);
-			DebugGLBoolText("Delete status", deleteStatus, false);
-
-			GLint compileStatus;
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
-			DebugGLBoolText("Compile status", compileStatus);
-
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode("Info log"))
-		{
-			const GLuint infoLogMaxLength = 1024;
-			static GLchar infoLogBuffer[infoLogMaxLength];
-
-			GLint infoLogLength;
-			glGetShaderInfoLog(shader, infoLogMaxLength, &infoLogLength, infoLogBuffer);
-			if (infoLogLength)
-				ImGui::InputTextMultiline("Log", (char*)infoLogBuffer, infoLogLength, ImVec2(-20.f, -40.f), ImGuiInputTextFlags_ReadOnly);
-			else
-				ImGui::Text("(empty)");
-
-			ImGui::TreePop();
-		}
-
-		ImGui::TreePop();
-	}
-
-	if (shader == shaderEdited)
-	{
-		if (shaderEdited != prevShaderEdited)
-		{
-			GLint shaderSourceLength;
-			glGetShaderiv(shaderEdited, GL_SHADER_SOURCE_LENGTH, &shaderSourceLength);
-			ImGui::Text("Shader len: %d", shaderSourceLength);
-
-			if (shaderSourceBufferSize < shaderSourceLength) {
-				shaderSourceBuffer = (char*)realloc(shaderSourceBuffer, shaderSourceLength);
-				shaderSourceBufferSize = shaderSourceLength;
-			}
-
-			glGetShaderSource(shaderEdited, shaderSourceBufferSize, &shaderSourceLength, shaderSourceBuffer);
-			prevShaderEdited = shaderEdited;
-		}
-
-		ImGui::Begin("Shader");
-		{
-			ImGui::InputTextMultiline("Source", shaderSourceBuffer, shaderSourceBufferSize, ImVec2(600, 600));
-
-			if (ImGui::Button("Recompile"))
-			{
-				glShaderSource(shaderEdited, 1, (const GLchar* const*)&shaderSourceBuffer, nullptr);
-				glCompileShader(shaderEdited);
-				GLint success = 0;
-				glGetShaderiv(shaderEdited, GL_COMPILE_STATUS, &success);
-				if (success > 0)
-					glLinkProgram(program);
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Close"))
-			{
-				shaderEdited = 0;
-			}
-		}
-		ImGui::End();
-	}
+GL::debug::debug()
+{
+	Data = new debug::data();
+	Data->WireframeProgram = GL::CreateProgram(gWireframeVertexShaderStr, gWireframeFragmentShaderStr);
+	glGenBuffers(1, &Data->BaryBuffer);
+	glGenVertexArrays(1, &Data->WireframeVAO);
+	glBindVertexArray(Data->WireframeVAO);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
 }
 
-void GLImGui::InspectProgram(GLuint program)
+GL::debug::~debug()
 {
-	GLint previousProgram;
-	glGetIntegerv(GL_CURRENT_PROGRAM, &previousProgram);
-	glUseProgram(program);
+	glDeleteProgram(Data->WireframeProgram);
+	glDeleteVertexArrays(1, &Data->WireframeVAO);
+	glDeleteBuffers(1, &Data->BaryBuffer);
+	delete Data;
+}
 
-	if (ImGui::TreeNode("Status"))
+void GL::debug::WireframePrepare(GLuint MeshVBO, GLsizei PositionStride, GLsizei PositionOffset, int VertexCount)
+{
+	assert(Data != nullptr);
+	assert(VertexCount % 3 == 0);
+
+	// Bind vertex array
+	glBindVertexArray(Data->WireframeVAO);
+
+	// Build more barycentric coordinates attributes if needed
+	if (VertexCount > Data->BaryBufferData.size())
 	{
-		GLint deleteStatus;
-		glGetProgramiv(program, GL_DELETE_STATUS, &deleteStatus);
-		DebugGLBoolText("Delete status", deleteStatus, false);
-
-		GLint linkStatus;
-		glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
-		DebugGLBoolText("Link status", linkStatus);
-
-		GLint validateStatus;
-		glGetProgramiv(program, GL_VALIDATE_STATUS, &validateStatus);
-		DebugGLBoolText("Validate status", validateStatus);
-
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode("Info log"))
-	{
-		const GLuint infoLogMaxLength = 1024;
-		static GLchar infoLogBuffer[infoLogMaxLength];
-
-		GLint infoLogLength;
-		glGetProgramInfoLog(program, infoLogMaxLength, &infoLogLength, infoLogBuffer);
-		if (infoLogLength)
-			ImGui::InputTextMultiline("Log", (char*)infoLogBuffer, infoLogLength, ImVec2(-20.f, -40.f), ImGuiInputTextFlags_ReadOnly);
-		else
-			ImGui::Text("(empty)");
-
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode("Attributes"))
-	{
-		GLint activeAttributes;
-		glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &activeAttributes);
-
-		for (int index = 0; index < activeAttributes; ++index)
+		int OldSize = (int)Data->BaryBufferData.size();
+		Data->BaryBufferData.resize(VertexCount);
+		for (int i = OldSize; i < VertexCount; i += 3)
 		{
-			GLsizei length;
-			GLint size;
-			GLenum type;
-			GLchar name[1024];
-
-			glGetActiveAttrib(program, index, 1024, &length, &size, &type, name);
-			if (length == 0)
-				break;
-
-			GLint location = glGetAttribLocation(program, name);
-
-			ImGui::Text("[%d:%s], size=%d, type=0x%x", location, name, size, type);
+			Data->BaryBufferData[i + 0] = { 1.f, 0.f, 0.f };
+			Data->BaryBufferData[i + 1] = { 0.f, 1.f, 0.f };
+			Data->BaryBufferData[i + 2] = { 0.f, 0.f, 1.f };
 		}
-		ImGui::TreePop();
+		glBindBuffer(GL_ARRAY_BUFFER, Data->BaryBuffer);
+		glBufferData(GL_ARRAY_BUFFER, Data->BaryBufferData.size() * sizeof(v3), &Data->BaryBufferData[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	}
 
-	if (ImGui::TreeNode("Uniform blocks"))
-	{
-		GLint activeUniformBlocks;
-		glGetProgramiv(program, GL_ACTIVE_UNIFORM_BLOCKS, &activeUniformBlocks);
+	// Bind position buffer
+	glBindBuffer(GL_ARRAY_BUFFER, MeshVBO);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, PositionStride, (void*)(size_t)PositionOffset);
 
-		for (int blockIndex = 0; blockIndex < activeUniformBlocks; ++blockIndex)
-		{
-			ImGui::PushID(blockIndex);
+	// Setup rendering
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
 
-			char blockName[256];
-			glGetActiveUniformBlockName(program, blockIndex, 256, nullptr, blockName);
+void GL::debug::WireframeDrawArray(GLint First, GLsizei Count, const mat4& MVP)
+{
+	assert(Data != nullptr);
 
-			GLint dataSize;
-			glGetActiveUniformBlockiv(program, blockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &dataSize);
-
-			GLuint bufferBinding;
-			glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, blockIndex, (GLint*)&bufferBinding);
-
-			if (ImGui::TreeNode("", "[%d:%s], bufferBinding=%d, size=%d", blockIndex, blockName, bufferBinding, dataSize))
-			{
-				GLint blockBinding, nameLength, activeUniforms;
-				glGetActiveUniformBlockiv(program, blockIndex, GL_UNIFORM_BLOCK_BINDING, &blockBinding);
-				glGetActiveUniformBlockiv(program, blockIndex, GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLength);
-				glGetActiveUniformBlockiv(program, blockIndex, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &activeUniforms);
-
-				ImGui::Text(" - blockBinding=%d", blockBinding);
-				ImGui::Text(" - nameLength=%d", nameLength);
-				if (ImGui::TreeNode("ACTIVE_UNIFORMS", "Active uniforms (count=%d)", activeUniforms))
-				{
-					if (activeUniforms < 256)
-					{
-						GLint activeUniformIndices[256];
-						glGetActiveUniformBlockiv(program, blockIndex, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, activeUniformIndices);
-						for (int i = 0; i < activeUniforms; ++i)
-						{
-							ImGui::PushID(i);
-							GLint uniformIndex = activeUniformIndices[i];
-
-							char uniformName[256];
-							glGetActiveUniformName(program, uniformIndex, 256, nullptr, uniformName);
-							if (ImGui::TreeNode("", "[%d:%s]", uniformIndex, uniformName))
-							{
-
-								ImGui::TreePop();
-							}
-							ImGui::PopID();
-						}
-					}
-					else
-					{
-						ImGui::Text("[Too many uniforms to display]");
-					}
-					ImGui::TreePop();
-				}
-
-				if (bufferBinding == 0)
-				{
-					if (ImGui::Button("Bind empty buffer"))
-					{
-						char* data = (char*)calloc(dataSize, 1);
-						glGenBuffers(1, &bufferBinding);
-						glBindBuffer(GL_UNIFORM_BUFFER, bufferBinding);
-						glBufferData(GL_UNIFORM_BUFFER, dataSize, data, GL_STATIC_DRAW);
-						glBindBuffer(GL_UNIFORM_BUFFER, 0);
-						free(data);
-
-						glBindBufferBase(GL_UNIFORM_BUFFER, blockIndex, bufferBinding);
-					}
-				}
-				ImGui::TreePop();
-			}
-
-			ImGui::PopID();
-		}
-
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode("Uniforms"))
-	{
-		GLint activeUniforms;
-		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &activeUniforms);
-
-		static bool AsColor = true;
-		ImGui::Separator();
-		ImGui::Checkbox("View vec3 as color", &AsColor);
-		ImGui::Separator();
-
-		for (GLuint index = 0; index < (GLuint)activeUniforms; ++index)
-		{
-			ImGui::PushID(index);
-
-			GLsizei length;
-			GLint size;
-			GLenum type;
-			GLchar name[1024];
-
-			glGetActiveUniform(program, index, 1024, &length, &size, &type, name);
-			if (length == 0)
-				break;
-
-			GLuint bufferBinding = 0;
-			GLint blockIndex;
-			GLint blockOffset = 0;
-			GLint blockSize = 0;
-			glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_BLOCK_INDEX, &blockIndex);
-			if (blockIndex != -1)
-			{
-				glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_OFFSET, &blockOffset);
-				glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE, &blockSize);
-				glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, blockIndex, (GLint*)&bufferBinding);
-			}
-
-			GLint uniformSize;
-			glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_SIZE, &uniformSize);
-
-			GLchar arrayName[1024];
-			if (uniformSize > 1)
-			{
-				strcpy(arrayName, name);
-				arrayName[strlen(arrayName) - 3] = '\0';
-			}
-
-			// ===========================
-			// TODO: Remove this crazyness (especially uniform array access)
-			// ===========================
-			for (int uniformArrayIndex = 0; uniformArrayIndex < uniformSize; ++uniformArrayIndex)
-			{
-				if (uniformSize > 1)
-				{
-					sprintf(name, "%s[%d]", arrayName, uniformArrayIndex);
-				}
-
-				GLint location = -1;
-				location = glGetUniformLocation(program, name);
-				ImGui::Text("[%d:%s] location=%d, size=%d, type=0x%x, blockIndex=%d, bufferBinding=%d", index, name, location, size, type, blockIndex, bufferBinding);
-
-				if (location != -1)
-				{
-					if (type == GL_BOOL)
-					{
-						GLint currentValue;
-						glGetUniformiv(program, location, &currentValue);
-						if (ImGui::Checkbox(name, (bool*)&currentValue))
-							glUniform1i(location, currentValue);
-					}
-					else if (type == GL_FLOAT)
-					{
-						GLfloat currentValue;
-						glGetUniformfv(program, location, &currentValue);
-						if (ImGui::DragFloat(name, &currentValue, 0.001f))
-							glUniform1f(location, currentValue);
-					}
-					else if (type == GL_FLOAT_VEC2)
-					{
-						GLfloat currentValue[2];
-						glGetUniformfv(program, location, currentValue);
-						if (ImGui::DragFloat2(name, currentValue, 0.001f))
-							glUniform2f(location, currentValue[0], currentValue[1]);
-					}
-					else if (type == GL_FLOAT_VEC3)
-					{
-						GLfloat currentValue[3];
-						glGetUniformfv(program, location, currentValue);
-						if ((!AsColor && ImGui::DragFloat3(name, currentValue, 0.001f)) ||
-							(AsColor && ImGui::ColorEdit3(name, currentValue)))
-							glUniform3f(location, currentValue[0], currentValue[1], currentValue[2]);
-					}
-					else if (type == GL_FLOAT_VEC4)
-					{
-						GLfloat currentValue[4];
-						glGetUniformfv(program, location, currentValue);
-						if (ImGui::DragFloat4(name, currentValue, 0.001f))
-							glUniform4f(location, currentValue[0], currentValue[1], currentValue[2], currentValue[3]);
-					}
-				}
-				else if (bufferBinding != 0)
-				{
-					glBindBuffer(GL_UNIFORM_BUFFER, bufferBinding);
-					if (type == GL_BOOL)
-					{
-						GLint currentValue;
-						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLint), sizeof(GLint), &currentValue);
-						if (ImGui::Checkbox(name, (bool*)&currentValue))
-							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLint), sizeof(GLint), &currentValue);
-					}
-					if (type == GL_FLOAT)
-					{
-						GLfloat currentValue;
-						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), sizeof(GLfloat), &currentValue);
-						if (ImGui::DragFloat(name, &currentValue, 0.001f))
-							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), sizeof(GLfloat), &currentValue);
-					}
-					else if (type == GL_FLOAT_VEC2)
-					{
-						GLfloat currentValue[2];
-						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 2 * sizeof(GLfloat), &currentValue);
-						if (ImGui::DragFloat3(name, currentValue, 0.001f))
-							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 2 * sizeof(GLfloat), &currentValue);
-					}
-					else if (type == GL_FLOAT_VEC3)
-					{
-						GLfloat currentValue[3];
-						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 3 * sizeof(GLfloat), &currentValue);
-						if ((!AsColor && ImGui::DragFloat3(name, currentValue, 0.001f)) ||
-							(AsColor && ImGui::ColorEdit3(name, currentValue)))
-							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 3 * sizeof(GLfloat), &currentValue);
-					}
-					else if (type == GL_FLOAT_VEC4)
-					{
-						GLfloat currentValue[4];
-						glGetBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 4 * sizeof(GLfloat), &currentValue);
-						if (ImGui::DragFloat3(name, currentValue, 0.001f))
-							glBufferSubData(GL_UNIFORM_BUFFER, blockOffset + uniformArrayIndex * sizeof(GLfloat), 4 * sizeof(GLfloat), &currentValue);
-					}
-					glBindBuffer(GL_UNIFORM_BUFFER, 0);
-				}
-			}
-			ImGui::PopID();
-		}
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode("Shaders"))
-	{
-		GLsizei count;
-		GLuint  shaders[4];
-
-		glGetAttachedShaders(program, 4, &count, shaders);
-		for (int i = 0; i < count; ++i)
-		{
-			DebugShader(program, shaders[i]);
-		}
-
-		ImGui::TreePop();
-	}
-
-	glUseProgram(previousProgram);
+	glUseProgram(Data->WireframeProgram);
+	//glUniform1f(glGetUniformLocation(Data->WireframeShader, "uLineWidth"), LineWidth);
+	//glUniform4fv(glGetUniformLocation(Data->WireframeShader, "uLineColor"), 1, LineColor.e);
+	glUniformMatrix4fv(glGetUniformLocation(Data->WireframeProgram, "uModelViewProj"), 1, GL_FALSE, MVP.e);
+	glDrawArrays(GL_TRIANGLES, First, Count);
 }

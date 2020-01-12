@@ -19,9 +19,10 @@ private:
 
     // GL objects needed by this demo
     GLuint Program = 0;
-    GLuint VertexBuffer = 0;
-    GLuint VAO = 0;
-
     GLuint Texture = 0;
+
+    GLuint VAO = 0;
+    GLuint VertexBuffer = 0;
     int VertexCount = 0;
+
 };

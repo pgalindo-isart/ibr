@@ -31,7 +31,7 @@ public:
         mat4 ColorTransform = Mat4::Identity();
     };
 
-    demo_postprocess(const platform_io& IO);
+    demo_postprocess(const platform_io& IO, GL::cache& GLCache, GL::debug& GLDebug);
     virtual ~demo_postprocess();
     virtual void Update(const platform_io& IO);
 
@@ -39,7 +39,7 @@ private:
     // 3d camera
     camera Camera = {};
 
-    demo_base DemoBase = {};
+    demo_base DemoBase;
     postprocess_pass_data PostProcessPassData = {};
     framebuffer Framebuffer = {};
 };
