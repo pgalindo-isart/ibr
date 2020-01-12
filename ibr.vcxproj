@@ -147,26 +147,36 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="externals\glad.c" />
+    <ClCompile Include="externals\imgui\imgui.cpp" />
+    <ClCompile Include="externals\imgui\imgui_demo.cpp" />
+    <ClCompile Include="externals\imgui\imgui_draw.cpp" />
+    <ClCompile Include="externals\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="externals\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="externals\stb_image.cpp" />
+    <ClCompile Include="externals\tiny_obj_loader.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\demo_base.cpp" />
     <ClCompile Include="src\demo_minimal.cpp" />
     <ClCompile Include="src\demo_pg_skybox.cpp" />
     <ClCompile Include="src\demo_postprocess.cpp" />
-    <ClCompile Include="src\glad.c" />
-    <ClCompile Include="src\imgui.cpp" />
-    <ClCompile Include="src\imgui_demo.cpp" />
-    <ClCompile Include="src\imgui_draw.cpp" />
-    <ClCompile Include="src\imgui_impl_glfw.cpp" />
-    <ClCompile Include="src\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="src\imgui_widgets.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh.cpp" />
     <ClCompile Include="src\opengl_helpers.cpp" />
     <ClCompile Include="src\opengl_helpers_imgui.cpp" />
-    <ClCompile Include="src\stb_image.cpp" />
-    <ClCompile Include="src\tiny_obj_loader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="externals\imgui\imstb_rectpack.h" />
+    <ClInclude Include="externals\imgui\imstb_textedit.h" />
+    <ClInclude Include="externals\imgui\imstb_truetype.h" />
+    <ClInclude Include="include\imconfig.h" />
+    <ClInclude Include="include\imgui.h" />
+    <ClInclude Include="include\imgui_impl_glfw.h" />
+    <ClInclude Include="include\imgui_impl_opengl3.h" />
+    <ClInclude Include="include\imgui_internal.h" />
+    <ClInclude Include="include\stb_image.h" />
+    <ClInclude Include="include\tiny_obj_loader.h" />
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\color.h" />
     <ClInclude Include="src\demo.h" />
@@ -174,22 +184,12 @@
     <ClInclude Include="src\demo_minimal.h" />
     <ClInclude Include="src\demo_pg_skybox.h" />
     <ClInclude Include="src\demo_postprocess.h" />
-    <ClInclude Include="src\imconfig.h" />
-    <ClInclude Include="src\imgui.h" />
-    <ClInclude Include="src\imgui_impl_glfw.h" />
-    <ClInclude Include="src\imgui_impl_opengl3.h" />
-    <ClInclude Include="src\imgui_internal.h" />
-    <ClInclude Include="src\imstb_rectpack.h" />
-    <ClInclude Include="src\imstb_textedit.h" />
-    <ClInclude Include="src\imstb_truetype.h" />
     <ClInclude Include="src\maths.h" />
     <ClInclude Include="src\maths_extension.h" />
     <ClInclude Include="src\mesh.h" />
     <ClInclude Include="src\opengl_headers.h" />
     <ClInclude Include="src\opengl_helpers.h" />
     <ClInclude Include="src\platform.h" />
-    <ClInclude Include="src\stb_image.h" />
-    <ClInclude Include="src\tiny_obj_loader.h" />
     <ClInclude Include="src\types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

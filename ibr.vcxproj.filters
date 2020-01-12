@@ -33,9 +33,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\glad.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -45,32 +42,8 @@
     <ClCompile Include="src\opengl_helpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\imgui.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui_demo.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui_draw.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui_impl_glfw.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui_impl_opengl3.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\imgui_widgets.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
     <ClCompile Include="src\demo_base.cpp">
       <Filter>Source Files\demo</Filter>
-    </ClCompile>
-    <ClCompile Include="src\stb_image.cpp">
-      <Filter>Source Files\ext</Filter>
-    </ClCompile>
-    <ClCompile Include="src\tiny_obj_loader.cpp">
-      <Filter>Source Files\ext</Filter>
     </ClCompile>
     <ClCompile Include="src\mesh.cpp">
       <Filter>Source Files</Filter>
@@ -86,6 +59,33 @@
     </ClCompile>
     <ClCompile Include="src\opengl_helpers_imgui.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\imgui\imgui.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\imgui\imgui_demo.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\imgui\imgui_draw.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\imgui\imgui_impl_glfw.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\imgui\imgui_impl_opengl3.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\stb_image.cpp">
+      <Filter>Source Files\ext</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\tiny_obj_loader.cpp">
+      <Filter>Source Files\ext</Filter>
+    </ClCompile>
+    <ClCompile Include="externals\glad.c">
+      <Filter>Source Files\ext</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -113,38 +113,8 @@
     <ClInclude Include="src\types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\imconfig.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imgui.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imgui_impl_glfw.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imgui_impl_opengl3.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imgui_internal.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imstb_rectpack.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imstb_textedit.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imstb_truetype.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
     <ClInclude Include="src\demo_base.h">
       <Filter>Header Files\demo</Filter>
-    </ClInclude>
-    <ClInclude Include="src\stb_image.h">
-      <Filter>Header Files\ext</Filter>
-    </ClInclude>
-    <ClInclude Include="src\tiny_obj_loader.h">
-      <Filter>Header Files\ext</Filter>
     </ClInclude>
     <ClInclude Include="src\mesh.h">
       <Filter>Header Files</Filter>
@@ -160,6 +130,36 @@
     </ClInclude>
     <ClInclude Include="src\color.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="externals\imgui\imstb_rectpack.h">
+      <Filter>Source Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="externals\imgui\imstb_textedit.h">
+      <Filter>Source Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="externals\imgui\imstb_truetype.h">
+      <Filter>Source Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imconfig.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui_impl_glfw.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui_impl_opengl3.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\imgui_internal.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stb_image.h">
+      <Filter>Header Files\ext</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tiny_obj_loader.h">
+      <Filter>Header Files\ext</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
