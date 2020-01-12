@@ -32,6 +32,7 @@ Ayant une durée d'environ une semaine, il est possible que vous n'ayez pas le t
 
 ## Estimation des durées d'implémentation des effets
 (Sujettes à variation selon les implémentations et le degré d'approfondissement)
+
 | Rapides            | Modérées          | Longues                           |
 |--------------------|-------------------|-----------------------------------|
 | Skybox             | Blur              | Impostors (si générés au runtime) |
