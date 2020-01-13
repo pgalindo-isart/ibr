@@ -13,12 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\imgui">
-      <UniqueIdentifier>{2674fd71-7ee7-4f45-9e72-d42e01fa6b9a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\imgui">
-      <UniqueIdentifier>{12284382-b2a3-4841-8a60-e58239410ed7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\demo">
       <UniqueIdentifier>{606d78ff-69c5-438a-a85e-bfb45ab00f8b}</UniqueIdentifier>
     </Filter>
@@ -30,6 +24,12 @@
     </Filter>
     <Filter Include="Header Files\ext">
       <UniqueIdentifier>{73b015b5-08bd-4b59-9452-9da6ad726a67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ext\imgui">
+      <UniqueIdentifier>{2674fd71-7ee7-4f45-9e72-d42e01fa6b9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ext\imgui">
+      <UniqueIdentifier>{12284382-b2a3-4841-8a60-e58239410ed7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -61,22 +61,22 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="externals\imgui\imgui.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClCompile>
     <ClCompile Include="externals\imgui\imgui_demo.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClCompile>
     <ClCompile Include="externals\imgui\imgui_draw.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClCompile>
     <ClCompile Include="externals\imgui\imgui_impl_glfw.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClCompile>
     <ClCompile Include="externals\imgui\imgui_impl_opengl3.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClCompile>
     <ClCompile Include="externals\imgui\imgui_widgets.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClCompile>
     <ClCompile Include="externals\stb_image.cpp">
       <Filter>Source Files\ext</Filter>
@@ -132,28 +132,28 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="externals\imgui\imstb_rectpack.h">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClInclude>
     <ClInclude Include="externals\imgui\imstb_textedit.h">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClInclude>
     <ClInclude Include="externals\imgui\imstb_truetype.h">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>Source Files\ext\imgui</Filter>
     </ClInclude>
     <ClInclude Include="include\imconfig.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>Header Files\ext\imgui</Filter>
     </ClInclude>
     <ClInclude Include="include\imgui.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>Header Files\ext\imgui</Filter>
     </ClInclude>
     <ClInclude Include="include\imgui_impl_glfw.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>Header Files\ext\imgui</Filter>
     </ClInclude>
     <ClInclude Include="include\imgui_impl_opengl3.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>Header Files\ext\imgui</Filter>
     </ClInclude>
     <ClInclude Include="include\imgui_internal.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>Header Files\ext\imgui</Filter>
     </ClInclude>
     <ClInclude Include="include\stb_image.h">
       <Filter>Header Files\ext</Filter>
