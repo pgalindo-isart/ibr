@@ -8,7 +8,7 @@
 
 ## Type : Post process
 - Prérequis : [Rendu offscreen](cards/postprocess.md)
-- Color correction
+- [Color correction/Color grading](cards/color_grading.md)
 - Tone mapping
 - Blur (Gaussian and downsampling)
 - Bloom
