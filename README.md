@@ -7,7 +7,7 @@
 - Impostors (objet 3D rendu sur une texture (souvent sous plusieurs angles de rotation))
 
 ## Type : Post process
-- Prérequis : [Rendu offscreen](cards/postprocessing.md)
+- Prérequis : [Rendu offscreen](cards/postprocess.md)
 - Color correction
 - Tone mapping
 - Blur (Gaussian and downsampling)
