@@ -1,7 +1,8 @@
 
 #include <vector>
 
-#include "imgui.h"
+#include <imgui.h>
+
 #include "opengl_helpers.h"
 #include "color.h"
 #include "maths.h"

@@ -4,7 +4,8 @@
 #include <string>
 #include <map>
 
-#include "stb_image.h"
+#include <stb_image.h>
+
 #include "platform.h"
 #include "mesh.h"
 

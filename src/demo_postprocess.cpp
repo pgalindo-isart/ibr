@@ -2,7 +2,8 @@
 #include <cstdio>
 #include <vector>
 
-#include "imgui.h"
+#include <imgui.h>
+
 #include "opengl_helpers.h"
 #include "platform.h"
 #include "mesh.h"

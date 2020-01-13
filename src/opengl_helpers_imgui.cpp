@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <cstdio>
 
-#include "imgui.h"
+#include <imgui.h>
 
 #include "opengl_helpers.h"
 

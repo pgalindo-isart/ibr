@@ -1,8 +1,8 @@
 
 #include <vector>
 
-#include "imgui.h"
-#include "stb_image.h"
+#include <imgui.h>
+
 #include "opengl_helpers.h"
 #include "maths.h"
 #include "mesh.h"
