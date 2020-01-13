@@ -87,10 +87,10 @@ Le fichier `maths.h` est volontairement limité, il va potentiellement être mis
 - (C'est le seul fichier à réécrire  si on voulait porter le projet sous une autre plateforme non gérée par GLFW)
 
 [```platform.h```](src/platform.h) :
-- Contient ```platform_io``` qui décrit les données de base (dimensions d'écran, mouvement de la souris) nécessairent à .
+- Contient ```platform_io``` qui sert à communiquer les informations de la plateforme (dimensions d'écran, mouvement de la souris) avec les démos.
 
 [```demo_minimal.cpp```](src/demo_minimal.cpp) :
-- Exemple minimal de l'interface de démo.
+- Exemple minimal.
 
 [```demo_postprocess.cpp```](src/demo_minimal.cpp) :
 - Exemple de rendu hors screen (1ère passe) afin de modifier les couleurs lors d'une 2ème passe.
@@ -100,10 +100,10 @@ Le fichier `maths.h` est volontairement limité, il va potentiellement être mis
 
 [```maths.h```](src/maths.h) :
 - Fonctions mathématiques et surcharges d'opérateurs pour les types ```v2```, ```v3```, ```v4``` et ```mat4```.
-- Utilisez le fichier ```maths_extension.h``` si vous avez besoin d'ajouter vos propres fonctions.
+- Utilisez le fichier ```maths_extension.h``` si vous avez besoin d'ajouter vos propres fonctions afin d'éviter les conflits en cas de modifications.
 
 [```camera.h```](src/camera.h) :
-- Gestion des déplacement (mode FPS ou libre)
+- Gestion des déplacement de la caméra (mode FPS ou libre)
 
 [```mesh.h```](src/mesh.h) :
 - Outil de construction de mesh.
