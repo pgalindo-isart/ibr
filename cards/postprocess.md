@@ -48,8 +48,8 @@ void demo_postprocess::Update(const platform_io& IO)
     // Framebuffer.ColorTexture est l'id de la texture qui contient les pixels
     // de la 1ère passe
     glBindTexture(GL_TEXTURE_2D, Framebuffer.ColorTexture);
-	glBindVertexArray(TexturedQuadVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(TexturedQuadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
     ...
 }
