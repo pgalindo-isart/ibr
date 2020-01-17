@@ -1,5 +1,5 @@
 
-# Installation
+# Installation du SDK fbx
 
 Téléchargez le SDK fbx sur le site officiel d'Autodesk. Le but est de récupérer les répertoire ```include``` et ```lib```. (Via installation ou juste dézippage via 7zip du .exe).
 
@@ -46,4 +46,4 @@ Dans un fichier .cpp, incluez ```#include <fbxsdk.h>``` puis dans une fonction e
 Si le programme se lance, c'est que la bibliothèque est prête à être utilisée !
 
 ### Liens :
-- Your First FBX SDK Program : http://docs.autodesk.com/FBX/2014/ENU/FBX-SDK-Documentation/index.html?url=cpp_ref/class_fbx_manager.html,topicNumber=cpp_ref_class_fbx_manager_html20827dab-7936-4092-b5e9-c7b174a914b6
+- Your First FBX SDK Program : http://docs.autodesk.com/FBX/2014/ENU/FBX-SDK-Documentation/index.html?url=files/GUID-29C09995-47A9-4B49-9535-2F6BDC5C4107.htm,topicNumber=d30e3979
