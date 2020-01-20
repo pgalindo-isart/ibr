@@ -60,10 +60,10 @@ Pour parcourir le scène graph :
 
 ## II. Générer les données OpenGL pour afficher la géométrie de la scène (sans s'occuper des matériaux)
 
-A suivre...
+À suivre...
 
 ### Liens utiles :
- - La classe VBOCache fournit dans les samples : https://help.autodesk.com/view/FBX/2017/ENU/?guid=__cpp_ref__view_scene_2_scene_cache_8h_example_html
+ - La classe VBOCache fournie dans les samples : https://help.autodesk.com/view/FBX/2017/ENU/?guid=__cpp_ref__view_scene_2_scene_cache_8h_example_html
 
 ## III. Ajouter les matériaux
 
