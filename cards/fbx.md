@@ -1,49 +1,74 @@
+## TP FBX
 
+<<<<<<< HEAD
 # Installation du SDK fbx
+=======
+![Scene](level-unity.png)
+>>>>>>> Add fbx assignment
 
-Téléchargez le SDK fbx sur le site officiel d'Autodesk. Le but est de récupérer les répertoire ```include``` et ```lib```. (Via installation ou juste dézippage via 7zip du .exe).
+**Le modèle de test ```level.fbx``` utilisé dans ces exemples est disponible sur le partage Drive.** Cette scène est extraite des assets Unity : [3D Beginner: Tutorial Resources](https://assetstore.unity.com/packages/essentials/tutorial-projects/3d-beginner-tutorial-resources-143848)
 
-Voilà les fichiers qui seront rajoutés à la racine de votre projet :
-```
-include/
-├── fbxsdk
-│   ├── core
-│   ├── fbxsdk_def.h
-│   ├── fbxsdk_nsbegin.h
-│   ├── fbxsdk_nsend.h
-│   ├── fbxsdk_version.h
-│   ├── fileio
-│   ├── scene
-│   └── utils
-├── fbxsdk.h
-libs/
-├── vs2015
-│   └── libfbxsdk.lib
-libfbxsdk.dll
-```
+## I. Afficher un listing des données contenues dans la scène pour vous familiariser avec le format.
 
-## Copie des entêtes
+Le format FBX contient l'ensemble des données d'une scène. Ce qui nous intéresse pour ce TP sont les informations suivantes :
+- La liste de mesh (FbxMesh)
+- La liste de matériaux (FbxSurfaceMaterial)
+- Un graphe de scène (FbxNode)
 
-Le projet est d'ores et déjà configuré pour inclure tous les headers situés ```include```. Donc on rajoute les entêtes dans ce répertoire.
+Chaque node contient de nombreuses informations, notamment :
+ - Son placement dans l'espace (translation, rotation, scale)
+ - Ses attributs (optionels) dont :
+   - FbxMesh
+   - FbxCamera
+   - FbxLight
 
-Attention à ne pas oublié le fichier ```fbxsdk.h```.
+Voici un exemple de listing : 
 
-### Copie de la bibliothèque dynamique
+![Scene](level-scene.png)
 
-On va utiliser la version dynamique, donc il va falloir lier notre programme à libfbxsdk.lib. Récupérez la version x64 et placez-la dans ```ibr/libs/vs2015/libfbxsdk.lib```.
+On constate ici que la scène :
+ - Contient 51 meshs
+ - Contient 27 matériaux (tous de types FbxSurfacePhong, une spécialisation de FbxSurfaceMaterial)
+ - Le scène graph contient 632 nodes
 
-Il faut également copier la dll qui sera utilisée lors du runtime. Le plus simple est de la mettre à la racine du projet ```ibr/libfbxsdk.dll```. De cette façon, le programme pourra être lancé hors de visual studio (ex. Renderdoc) sans problème.
+La node ```RootNode>Level>Bedrooms>Bedroom01>Bed``` contient un attribut de type mesh et a une texture diffuse qui pointe vers ```media/level.fbm/Bed_Albedo.tif```.
 
-### Configuration du projet Visual Studio
+Préférez un affichage ImGui plutôt que textuel pur. Utilisez la fonction ImGui::TreeNode pour la hiérarchie du graph de scène.
 
-Dans les propriétés de link du projet, ajouter le .lib :
+### Fonctions utiles (liste non-exhaustive)
+Pour charger le FBX :
+ - FbxManager::Create
+ - FbxIOSettings::Create
+ - FbxImporter::Create
+ - FbxImporter::Initialize
+ - FbxImporter::Import
+ - FbxScene::Create
 
-![Linker](linker.png)
+Pour lister les éléments de la scène :
+ - FbxScene::GetGeometryCount et FbxScene::GetGeometry
+ - La classe FbxMesh hérite de la classe FbxGeometry
+ - FbxScene::GetMaterialCount et FbxScene::GetMaterial
+ - La classe FbxSurfacePhong hérite de la classe FbxSurfaceMaterial
+ - FbxScene::GetNodeCount
 
-### Vérification du fonctionnement
+Pour parcourir le scène graph :
+ - FbxScene::GetRootNode
+ - FbxNode::GetNodeAttributeCount
+ - FbxNode::GetNodeAttributeByIndex
+ - FbxNodeAttribute::GetFirstProperty et FbxNodeAttribute::GetNextProperty
+ - Savoir que FbxLight, FbxMesh et FbxCamera héritent de FbxNodeAttribute
 
-Dans un fichier .cpp, incluez ```#include <fbxsdk.h>``` puis dans une fonction exécutez la ligne ```FbxManager* lSdkManager = FbxManager::Create();```.
-Si le programme se lance, c'est que la bibliothèque est prête à être utilisée !
+### Liens utiles :
+ - La doc : http://help.autodesk.com/view/FBX/2015/ENU/
+ - Your First FBX SDK Program : http://help.autodesk.com/view/FBX/2015/ENU/?guid=__files_GUID_29C09995_47A9_4B49_9535_2F6BDC5C4107_htm
 
-### Liens :
-- Your First FBX SDK Program : http://docs.autodesk.com/FBX/2014/ENU/FBX-SDK-Documentation/index.html?url=files/GUID-29C09995-47A9-4B49-9535-2F6BDC5C4107.htm,topicNumber=d30e3979
+## II. Générer les données OpenGL pour afficher la géométrie de la scène (sans s'occuper des matériaux)
+
+A suivre...
+
+### Liens utiles :
+ - La classe VBOCache fournit dans les samples : https://help.autodesk.com/view/FBX/2017/ENU/?guid=__cpp_ref__view_scene_2_scene_cache_8h_example_html
+
+## III. Ajouter les matériaux
+
+## IV. Ajouter les lights
