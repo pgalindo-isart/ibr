@@ -28,6 +28,34 @@ Le projet est d'ores et déjà configuré pour inclure tous les headers situés 
 
 Attention à ne pas oublié le fichier ```fbxsdk.h```.
 
+Afin d'éviter les nombreuses erreurs intellisense sous Visual Studio. Je vous conseille de wrapper l'inclusion de <fbxsdk.h> de cette façon :
+
+`src/fbx_headers.h`
+```c++
+#define FBXSDK_NAMESPACE_USING 0
+#define FBXSDK_SHARED
+
+#pragma warning(push)
+#pragma warning(disable : 26812)
+#pragma warning(disable : 26495)
+#include <fbxsdk.h>
+#pragma warning(pop)
+```
+
+De cette façon, c'est à nous de définir ou non l'utilisation du namespace fbxsdk.
+
+`src/demo_fbx.cpp`
+```c++
+#include "fbx_headers.h"
+
+using namespace fbxsdk;
+
+demo_fbx::demo_fbx()
+{
+    FBXManager = fbxsdk::FbxManager::Create();
+}
+```
+
 ### Copie de la bibliothèque dynamique
 
 On va utiliser la version dynamique, donc il va falloir lier notre programme à libfbxsdk.lib. Récupérez la version x64 et placez-la dans ```ibr/libs/vs2015/libfbxsdk.lib```.
