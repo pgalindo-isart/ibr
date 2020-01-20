@@ -1,10 +1,6 @@
 ## TP FBX
 
-<<<<<<< HEAD
-# Installation du SDK fbx
-=======
 ![Scene](level-unity.png)
->>>>>>> Add fbx assignment
 
 **Le modèle de test ```level.fbx``` utilisé dans ces exemples est disponible sur le partage Drive.** Cette scène est extraite des assets Unity : [3D Beginner: Tutorial Resources](https://assetstore.unity.com/packages/essentials/tutorial-projects/3d-beginner-tutorial-resources-143848)
 
