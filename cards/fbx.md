@@ -158,16 +158,27 @@ struct fbx_mesh_gl_data
 // Ce sont les paramètres à passer à la fonction glDrawArrays()
 ```
 ```c++
-// Une fois au chargement de la scene
-void LoadMeshInVRAM(FbxMesh* Mesh)
+// Au chargement, on envoit les infos de la scene dans la VRAM
+// Ici, seul les meshs sont envoyés en VRAM, mais on peut aussi y envoyer les textures
+void UploadSceneToVRAM(FbxScene* FBXScene)
 {
-    fbx_mesh_gl_data* MeshGLData = ...;
+    std::vector<fbx_vertex> Vertices;
+    for (int i = 0; i < Scene->GetGeometryCount(); ++i)
+    {
+        FbxMesh* Mesh = ...
 
-    // Load and send FbxMesh vertice to VBO
-    MeshGLData->Start = ...; // Start index in VBO
-    MeshGLData->Count = ...; // Vertex count for this mesh
+        // ... Store mesh vertices into Vertices array
 
-    Mesh->SetUserDataPtr(MeshGLData);
+        // Store mesh vertices index info
+        fbx_mesh_gl_data* MeshGLData = ...;
+        MeshGLData->Start = ...; // Start index in Vertex array
+        MeshGLData->Count = ...; // Vertex count for this mesh
+
+        Mesh->SetUserDataPtr(MeshGLData);
+    }
+
+    // Gen unique VBO
+    // Send Vertices to VBO
 }
 ```
 
