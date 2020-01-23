@@ -143,7 +143,55 @@ for (int PolygonIndex = 0; PolygonIndex < Mesh->GetPolygonCount(); ++PolygonInde
 }
 ```
 
-(à suivre : parcours du graph et affichage)
+### L'affichage du mesh
+Plusieurs possibilités s'offrent à nous pour afficher le mesh. Dans les exemples suivant, on part du principe que tous les meshs sont dans un même VBO.
+
+De plus, on va utiliser le [user pointer](https://help.autodesk.com/view/FBX/2015/ENU/?guid=__files_GUID_5FAF6FE0_5904_45C3_915A_DB0C9586D45B_htm) du FbxMesh pour stocker des informations que l'on pourra récupérer lors du parcours du scene graph.
+
+Chaque mesh est donc représenté par cette structure :
+```c++
+struct fbx_mesh_gl_data
+{
+    GLuint Start;
+    GLuint Count;
+};
+// Ce sont les paramètres à passer à la fonction glDrawArrays()
+```
+```c++
+// Une fois au chargement de la scene
+void LoadMeshInVRAM(FbxMesh* Mesh)
+{
+    fbx_mesh_gl_data* MeshGLData = ...;
+
+    // Load and send FbxMesh vertice to VBO
+    MeshGLData->Start = ...; // Start index in VBO
+    MeshGLData->Count = ...; // Vertex count for this mesh
+
+    Mesh->SetUserDataPtr(MeshGLData);
+}
+```
+
+Fonction récursive pour la traversée et l'affichage du graph de scène (pseudo-code) :
+```c++
+void DisplayFbxNode(FbxNode* Node, const mat4& ViewProjectionMatrix, const mat4& ModelMatrix)
+{
+    FbxMesh* Mesh = Node->GetMesh();
+    if (Mesh)
+    {
+        fbx_mesh_gl_data* MeshData = (fbx_mesh_gl_data*)Mesh->GetUserDataPtr();
+        // Send matrix uniform
+        // Draw vertices with glDrawArray(MeshData->Start, MeshData->Count)
+    }
+    
+    for (int i = 0; i < Node->GetChildCount(); ++i)
+    {
+        FbxNode* Child = Node->GetChild(i);
+        FbxMatrix Matrix = Child->EvaluateLocalTransform();
+        mat4 ChildMatrix = ConvertFBXMatrixToMat4(Matrix);
+        DisplayFBXNode(Child, ViewProjectionMatrix, ModelMatrix * ChildMatrix);
+    }
+}
+```
 
 ![Scene](level-geometry.png)
 
