@@ -54,6 +54,44 @@ Pour parcourir le scène graph :
  - FbxNodeAttribute::GetFirstProperty et FbxNodeAttribute::GetNextProperty
  - Savoir que FbxLight, FbxMesh et FbxCamera héritent de FbxNodeAttribute
 
+Voilà une interface possible pour parcourir et afficher toutes les propriétés d'une scène fbx.
+
+```c++
+// Internal functions
+// ==================
+// Inspect a property (switch case on FbxProperty::GetPropertyDataType().GetType())
+// and its internal source objects
+void InspectFBXProperty(FbxProperty* Property);
+// Display list of properties of an object
+void InspectFBXObject(FbxObject* Object);
+// Show the node tree
+void ShowFBXNodeTree(FbxNode* Node, FbxNode** NodeSelected);
+
+// Interface functions
+// ===================
+// Show FbxScene tree
+FbxNode* PG::ShowFBXSceneTree(FbxScene* FBXScene);
+```
+
+### Snippets utiles
+
+Chaque FbxProperty peut contenir des FbxObjects ! (Exemple : La property diffuse peut contenir un SrcObject de type FbxFileTexture). Voir [Textures](https://help.autodesk.com/view/FBX/2015/ENU/?guid=__files_GUID_AD69D141_C5DD_4609_AD5A_4805321FADD4_htm).
+```c++
+FbxProperty* Property = ...;
+for (int i = 0; i < Property->GetSrcObjectCount(); ++i)
+{
+    FbxObject* SrcObject = Property->GetSrcObject(i);
+    // Inspect SrcObject properties
+}
+```
+
+Caster un objet :
+```c++
+FbxFileTexture* FileTexture = FbxCast<FbxFileTexture>(SrcObject);
+if (FileTexture)
+    ImGui::LabelText("FileName", FileTexture->GetFileName());
+```
+
 ### Liens utiles :
  - La doc : http://help.autodesk.com/view/FBX/2015/ENU/
  - Your First FBX SDK Program : http://help.autodesk.com/view/FBX/2015/ENU/?guid=__files_GUID_29C09995_47A9_4B49_9535_2F6BDC5C4107_htm
