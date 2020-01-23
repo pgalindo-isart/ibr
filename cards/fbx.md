@@ -211,4 +211,29 @@ void DisplayFbxNode(FbxNode* Node, const mat4& ViewProjectionMatrix, const mat4&
 
 ## III. Ajouter les matériaux
 
+Certains fbx contiennent des meshes avec plusieurs matériaux. Pour s'affranchir de cette contrainte, une solution est de convertir la scène au chargement :
+```c++
+FbxGeometryConverter Converter(FBXManager);
+Converter.SplitMeshesPerMaterial(FBXScene, true);
+```
+De cette manière, la node contiendra plusieurs meshs qui auront chacun un unique matériel associé.
+
+Extrait du parcours du scène graph :
+```c++
+    // Display meshes
+    for (int i = 0; i < Node->GetNodeAttributeCount(); ++i)
+    {
+        FbxNodeAttribute* Attribute = Node->GetNodeAttributeByIndex(i);
+        FbxMesh* Mesh = FbxCast<FbxMesh>(Attribute);
+        
+        if (Mesh)
+        {
+            // Acces au material via Node->GetMaterial(i)
+        }
+    }
+
+    // Recursively draw children
+    ...
+```
+
 ## IV. Ajouter les lights
