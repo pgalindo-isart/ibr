@@ -229,7 +229,7 @@ Extrait du parcours du scène graph :
         if (Mesh)
         {
             int MaterialId = ...
-            // On peut retrouver le material utilisé par le 1er polygone avec Mesh->GetElementMaterial(0)->GetIndexArray().GetAt(0)(i)
+            // On peut retrouver le material utilisé par le 1er polygone avec Mesh->GetElementMaterial()->GetIndexArray().GetAt(0)
             // Il vaut mieux stocker cette donnée
             BindFBXMaterial(Node->GetMaterial(MaterialId));
             DrawMesh(Mesh);
