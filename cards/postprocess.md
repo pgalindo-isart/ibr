@@ -6,7 +6,7 @@ Exemple de setup de FBO afin de pouvoir faire un effet de post-process sur l'ens
 
 ![Screenshot](postprocess.png)
 
-La création d'un framebuffer nouse permet de rendre notre scène offscreen. 
+La création d'un framebuffer nous permet de rendre notre scène offscreen. 
 
 On peut ensuite récupérer la texture générée et l'afficher sur un quad plein écran. L'implémentation du fragment shader nous donne alors l'opportunité de faire un traitement spécifique sur chaque pixel de l'image.
 
